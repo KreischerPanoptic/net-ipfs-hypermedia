@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Ipfs.Hypermedia</RootNamespace>
+    <AssemblyName>Ipfs.Hypermedia</AssemblyName>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version>0.1.0</Version>
+    <Authors>Dennis Raine</Authors>
+    <Company>Dennis Raine</Company>
+    <Description>A self-describing binary metadata format for IPFS entities</Description>
+    <Copyright>© 2020 Dennis Raine</Copyright>
+  </PropertyGroup>
+
+</Project>
