@@ -53,7 +53,7 @@ namespace Ipfs.Hypermedia
         /// <remarks>
         ///   Due to limitation, directories can store only file system entities that have basic information for OS.
         /// </remarks>
-        public List<ISystemEntity> Entities { get; set; }
+        public List<ISystemEntity> Entities { get; set; } = new List<ISystemEntity>();
         /// <summary>
         ///   Size of directory in bytes.
         /// </summary>

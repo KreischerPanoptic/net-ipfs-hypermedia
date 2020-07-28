@@ -2,7 +2,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Ipfs.Hypermedia
 {
@@ -98,8 +101,9 @@ namespace Ipfs.Hypermedia
         /// <remarks>
         ///   It's not limited to storing only <see cref="Directory">Directories</see> or <see cref="File">Files</see>,
         ///   but <see cref="Hypermedia">Hypermedia</see> as well.
+        ///   Hypermedia can be stored for transparent include and update of not owned hypermedia.
         /// </remarks>
-        public List<IEntity> Entities { get; set; }
+        public List<IEntity> Entities { get; set; } = new List<IEntity>();
         /// <summary>
         /// Boolean flag for indication if entities inside hypermedia doesn't contain hypermedia metadata, thus metadata can be unreliable.
         /// </summary>
@@ -124,7 +128,7 @@ namespace Ipfs.Hypermedia
         ///   Unnesessary property.
         ///   Used for standartisation of clients working in Hypermedia network.
         /// </remarks>
-        public string DefaultSubscriptionMessage { get; } = "subscribed";
+        public string DefaultSubscriptionMessage { get; private set; } = "subscribed";
         /// <summary>
         ///   Default message of client after downloading hypermedia.
         /// </summary>
@@ -133,7 +137,7 @@ namespace Ipfs.Hypermedia
         ///   Such clients have priority for downloading client to connect with.
         ///   Used for standartisation of clients working in Hypermedia network.
         /// </remarks>
-        public string DefaultSeedingMessage { get; } = "seeding";
+        public string DefaultSeedingMessage { get; private set; } = "seeding";
         /// <summary>
         ///   Hash of hypermedia for verification purposes.
         /// </summary>
@@ -141,7 +145,7 @@ namespace Ipfs.Hypermedia
         private IEntity _parent;
         /// <summary>
         ///   Link to parent entity in which this Hypermedia resides.
-        ///   If it's outer hypermedia - it equals to itself.
+        ///   If it's outer hypermedia - it equals null.
         /// </summary>
         /// <remarks>
         ///   It can be only a <see cref="Hypermedia">Hypermedia</see>.
@@ -166,29 +170,17 @@ namespace Ipfs.Hypermedia
         ///   It used in clients for choosing correct algorithms of parsing a hypermedia.
         ///   Current default - hypermedia/0.1.0
         /// </remarks>
-        public string Version { get; } = "hypermedia/0.1.0";
-        /// <summary>
-        ///   Default parameterless constructor. Initializes <see cref="Parent">Parent</see> with current instance of Hypermedia.
-        ///   Creates hash and topic.
-        /// </summary>
-        public Hypermedia()
-        {
-            Parent = this;
-            SetHash();
-            SetTopic();
-        }
+        public string Version { get; private set; } = "hypermedia/0.1.0";
         /// <summary>
         ///   Default parameterless constructor. Initializes <see cref="Parent">Parent</see> with passed <paramref name="parent"/>.
-        ///   Creates hash and topic.
         /// </summary>
         /// <param name="parent">
         ///   Parent hypermedia for this hypermedia.
+        ///   By default equals null;
         /// </param>
-        public Hypermedia(Hypermedia parent)
+        public Hypermedia(Hypermedia parent = null)
         {
             Parent = parent;
-            SetHash();
-            SetTopic();
         }
         /// <summary>
         ///   Creates and set hash for hypermedia instance.
@@ -264,6 +256,35 @@ namespace Ipfs.Hypermedia
             if (!(Topic is null))
                 throw new Exception("Topic can only be set once");
             Topic = $"{Name}_{Hash}";
+        }
+        /// <summary>
+        ///   Serializes given hypermedia to stream asynchronously.
+        /// </summary>
+        /// <param name="outputStream">
+        ///   The output stream in which hypermedia would be serialized.
+        /// </param>
+        /// <param name="instance">
+        ///   The instance of hypermedia that would be serialized.
+        /// </param>
+        /// <returns>
+        ///   Task or void. 
+        /// </returns>
+        public static async Task Serialize(Stream outputStream, Hypermedia instance)
+        {
+            await JsonSerializer.SerializeAsync<Hypermedia>(outputStream, instance, options: new JsonSerializerOptions() { MaxDepth = 0, WriteIndented = true });
+        }
+        /// <summary>
+        ///   Deserializes given stream to hypermedia asynchronously.
+        /// </summary>
+        /// <param name="inputStream">
+        ///   The input stream from which hypermedia would be deserialized.
+        /// </param>
+        /// <returns>
+        ///   Task with Hypermedia.. 
+        /// </returns>
+        public static async Task<Hypermedia> Deserialize(Stream inputStream)
+        {
+            return await JsonSerializer.DeserializeAsync<Hypermedia>(inputStream, options: new JsonSerializerOptions() { MaxDepth = 0, WriteIndented = true });
         }
     }
 }

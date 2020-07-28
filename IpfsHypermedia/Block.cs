@@ -2,7 +2,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq.Expressions;
+using System.Security.Permissions;
 using System.Text;
 
 namespace Ipfs.Hypermedia
@@ -34,9 +36,9 @@ namespace Ipfs.Hypermedia
         /// <summary>
         ///   Hash of block for verification purposes.
         /// </summary>
-        public string Hash { get; private set; }
+        public string Hash { get; private set; } = null;
         /// <summary>
-        ///   Creates and set hash for Block instance.
+        ///   Creates and set hash for block instance.
         /// </summary>
         /// <param name="content">
         ///   Raw bytes of block in byte array.
@@ -46,17 +48,24 @@ namespace Ipfs.Hypermedia
         ///   but it impossible, due to nature of this library and purposes.
         ///   So, the best approach is to upload a file to IPFS, retrieve block and set it manually.
         /// </remarks>
-        public Block(byte[] content)
+        public void SetHash(byte[] content)
         {
-            KeccakManaged keccak = new KeccakManaged(512);
-            var buf = keccak.ComputeHash(content);
-
-            StringBuilder sb = new StringBuilder();
-            foreach(var b in buf)
+            if (Hash is null)
             {
-                sb.Append(b.ToString("X2"));
+                KeccakManaged keccak = new KeccakManaged(512);
+                var buf = keccak.ComputeHash(content);
+
+                StringBuilder sb = new StringBuilder();
+                foreach (var b in buf)
+                {
+                    sb.Append(b.ToString("X2"));
+                }
+                Hash = sb.ToString();
             }
-            Hash = sb.ToString();
+            else
+            {
+                throw new Exception("Hash can only be set once");
+            }
         }
     }
 }
