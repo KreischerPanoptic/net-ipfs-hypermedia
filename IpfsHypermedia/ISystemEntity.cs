@@ -23,20 +23,12 @@ namespace Ipfs.Hypermedia
         /// </remarks>
         FileAttributes? Attributes { get; set; }
         /// <summary>
-        ///   Last modification date and time for entity.
+        ///   Last modification date and time for entity in UTC.
         /// </summary>
         /// <remarks>
-        ///   Local time of creator of Hypermedia.
+        ///   Serializes to total seconds passed from Unix Epoch.
         ///   Made nullable to be compatible with raw ipfs entities which doesn't have such information.
         /// </remarks>
         DateTime? LastModifiedDateTime { get; set; }
-        /// <summary>
-        ///   Last modification date and time for entity.
-        /// </summary>
-        /// <remarks>
-        ///   UTC time of creator of Hypermedia.
-        ///   Made nullable to be compatible with raw ipfs entities which doesn't have such information.
-        /// </remarks>
-        DateTime? LastModifiedDateTimeUtc { get; set; }
     }
 }
