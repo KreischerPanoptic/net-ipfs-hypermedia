@@ -6,10 +6,25 @@
     <AssemblyName>Ipfs.Hypermedia</AssemblyName>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Version>0.1.0</Version>
-    <Authors>Dennis Raine</Authors>
-    <Company>Dennis Raine</Company>
-    <Description>A self-describing binary metadata format for IPFS entities</Description>
-    <Copyright>© 2020 Dennis Raine</Copyright>
+    <Authors>Dennis Soroka</Authors>
+    <Company>Dennis Soroka</Company>
+    <Description>A self-describing binary metadata format for IPFS entities.
+
+The interplanetary file system is the permanent web. It is a new hypermedia distribution protocol, addressed by content and identities. IPFS enables the creation of completely distributed applications. It aims to make the web faster, safer, and more open.
+The Hypermedia aims to create self-describing metadata format, that is easy to distribute and use.</Description>
+    <Copyright>© 2020 Dennis Soroka</Copyright>
+    <RepositoryUrl>https://github.com/KreischerPanoptic/net-ipfs-hypermedia</RepositoryUrl>
+    <PackageTags>ipfs peer-to-peer distributed file-system</PackageTags>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression></PackageLicenseExpression>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
 
 </Project>
