@@ -260,21 +260,38 @@ namespace Ipfs.Hypermedia
         ///   Encoding used for serialization of file name.
         ///   Usually passed from parent <see cref="Hypermedia">hypermedia</see> where file resides.
         /// </param>
-        public static string SerializeToString(File file, Encoding encoding)
+        /// <param name="formatting">
+        ///   <see cref="Formatting">Formatting</see> options for serialization.
+        /// </param>
+        /// <param name="tabulationCount">
+        ///   Internal argument for count of tabulations.
+        /// </param>
+        public static string SerializeToString(File file, Encoding encoding, Formatting formatting = Formatting.None, uint tabulationCount = 0)
         {
+            string outerTabulationBuilder = string.Empty;
+            string innerTabulationBuilder = string.Empty;
+            if (formatting == Formatting.Indented)
+            {
+                innerTabulationBuilder += '\t';
+                for (int i = 0; i < tabulationCount; ++i)
+                {
+                    outerTabulationBuilder += '\t';
+                    innerTabulationBuilder += '\t';
+                }
+            }
             StringBuilder builder = new StringBuilder();
             builder.AppendLine("[");
-            builder.AppendLine($"(string:path)={file.Path},");
-            builder.AppendLine($"(string:name)={EncodingTools.EncodeString(file.Name, encoding)},");
-            builder.AppendLine($"(string:extension)={file.Extension},");
-            builder.AppendLine($"(file_attributes_null:attributes)={FileAttributesSerializer(file.Attributes)},");
-            builder.AppendLine($"(date_time_null:last_modified_date_time)={(file.LastModifiedDateTime is null?"null":((DateTimeOffset)file.LastModifiedDateTime.Value).ToUnixTimeSeconds().ToString())},");
-            builder.AppendLine($"(list<block>[{file.Blocks.Count}]:blocks)="+"{"+(file.IsSingleBlock ? "empty;" : BlocksListSerializer(file.Blocks))+"},");
-            builder.AppendLine($"(boolean:is_single_block)={(file.IsSingleBlock ? "true" : "false")},");
-            builder.AppendLine($"(uint64:size)={file.Size},");
-            builder.AppendLine($"(string:parent_path)={file.Parent.Path},");
-            builder.AppendLine($"(string:hash)={file.Hash};");
-            builder.Append("]");
+            builder.AppendLine($"{innerTabulationBuilder}(string:path)={file.Path},");
+            builder.AppendLine($"{innerTabulationBuilder}(string:name)={EncodingTools.EncodeString(file.Name, encoding)},");
+            builder.AppendLine($"{innerTabulationBuilder}(string:extension)={file.Extension},");
+            builder.AppendLine($"{innerTabulationBuilder}(file_attributes_null:attributes)={FileAttributesSerializer(file.Attributes)},");
+            builder.AppendLine($"{innerTabulationBuilder}(date_time_null:last_modified_date_time)={(file.LastModifiedDateTime is null?"null":((DateTimeOffset)file.LastModifiedDateTime.Value).ToUnixTimeSeconds().ToString())},");
+            builder.AppendLine($"{innerTabulationBuilder}(list<block>[{file.Blocks.Count}]:blocks)="+"{"+(file.IsSingleBlock ? "empty;" : BlocksListSerializer(file.Blocks, formatting, tabulationCount + 1))+"},");
+            builder.AppendLine($"{innerTabulationBuilder}(boolean:is_single_block)={(file.IsSingleBlock ? "true" : "false")},");
+            builder.AppendLine($"{innerTabulationBuilder}(uint64:size)={file.Size},");
+            builder.AppendLine($"{innerTabulationBuilder}(string:parent_path)={file.Parent.Path},");
+            builder.AppendLine($"{innerTabulationBuilder}(string:hash)={file.Hash};");
+            builder.Append($"{outerTabulationBuilder}]");
             return builder.ToString();
         }
         #region Serialization Algorithms
@@ -296,15 +313,26 @@ namespace Ipfs.Hypermedia
             }
         }
 
-        private static string BlocksListSerializer(List<Block> blocks)
+        private static string BlocksListSerializer(List<Block> blocks, Formatting formatting = Formatting.None, uint tabulationCount = 0)
         {
+            string outerTabulationBuilder = string.Empty;
+            string innerTabulationBuilder = string.Empty;
+            if (formatting == Formatting.Indented)
+            {
+                innerTabulationBuilder += '\t';
+                for (int i = 0; i < tabulationCount; ++i)
+                {
+                    innerTabulationBuilder += '\t';
+                    outerTabulationBuilder += '\t';
+                }
+            }
             StringBuilder builder = new StringBuilder();
             builder.AppendLine("[");
             for (int i = 0; i < blocks.Count; ++i)
             {
-                builder.AppendLine($"(block:{i})={Block.SerializeToString(blocks[i])}{(i == blocks.Count-1 ? ";" : ",")}");
+                builder.AppendLine($"{innerTabulationBuilder}(block:{i})={Block.SerializeToString(blocks[i], formatting, tabulationCount + 1)}{(i == blocks.Count-1 ? ";" : ",")}");
             }
-            builder.Append("]");
+            builder.Append($"{outerTabulationBuilder}]");
             return builder.ToString();
         }
         #endregion Serialization Algorithms
@@ -334,6 +362,8 @@ namespace Ipfs.Hypermedia
             ulong size = 0;
             string parent_path = null;
             string hash = null;
+
+            input = input.Replace("\t", "");
 
             if (!input.StartsWith("["))
                 throw new ArgumentException("Bad formatting in serialized string detected. Expected [ in start.");

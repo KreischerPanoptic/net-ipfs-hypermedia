@@ -206,19 +206,36 @@ namespace Ipfs.Hypermedia
         ///   Encoding used for serialization of directory name.
         ///   Usually passed from parent <see cref="Hypermedia">hypermedia</see> where directory resides.
         /// </param>
-        public static string SerializeToString(Directory directory, Encoding encoding)
+        /// <param name="formatting">
+        ///   <see cref="Formatting">Formatting</see> options for serialization.
+        /// </param>
+        /// <param name="tabulationCount">
+        ///   Internal argument for count of tabulations.
+        /// </param>
+        public static string SerializeToString(Directory directory, Encoding encoding, Formatting formatting = Formatting.None, uint tabulationCount = 0)
         {
+            string outerTabulationBuilder = string.Empty;
+            string innerTabulationBuilder = string.Empty;
+            if (formatting == Formatting.Indented)
+            {
+                innerTabulationBuilder += '\t';
+                for (int i = 0; i < tabulationCount; ++i)
+                {
+                    outerTabulationBuilder += '\t';
+                    innerTabulationBuilder += '\t';
+                }
+            }
             StringBuilder builder = new StringBuilder();
             builder.AppendLine("[");
-            builder.AppendLine($"(string:path)={directory.Path},");
-            builder.AppendLine($"(string:name)={EncodingTools.EncodeString(directory.Name, encoding)},");
-            builder.AppendLine($"(file_attributes_null:attributes)={FileAttributesSerializer(directory.Attributes)},");
-            builder.AppendLine($"(date_time_null:last_modified_date_time)={(directory.LastModifiedDateTime is null ? "null" : ((DateTimeOffset)directory.LastModifiedDateTime.Value).ToUnixTimeSeconds().ToString())},");
-            builder.AppendLine($"(list<system_entity_interface>[{directory.Entities.Count}]:entities)=" + "{" + (directory.Entities.Count <= 0 ? "empty;" : SystemEntitiesListSerializer(directory.Entities, encoding)) + "},");
-            builder.AppendLine($"(uint64:size)={directory.Size},");
-            builder.AppendLine($"(string:parent_path)={directory.Parent.Path},");
-            builder.AppendLine($"(string:hash)={directory.Hash};");
-            builder.Append("]");
+            builder.AppendLine($"{innerTabulationBuilder}(string:path)={directory.Path},");
+            builder.AppendLine($"{innerTabulationBuilder}(string:name)={EncodingTools.EncodeString(directory.Name, encoding)},");
+            builder.AppendLine($"{innerTabulationBuilder}(file_attributes_null:attributes)={FileAttributesSerializer(directory.Attributes)},");
+            builder.AppendLine($"{innerTabulationBuilder}(date_time_null:last_modified_date_time)={(directory.LastModifiedDateTime is null ? "null" : ((DateTimeOffset)directory.LastModifiedDateTime.Value).ToUnixTimeSeconds().ToString())},");
+            builder.AppendLine($"{innerTabulationBuilder}(list<system_entity_interface>[{directory.Entities.Count}]:entities)=" + "{" + (directory.Entities.Count <= 0 ? "empty;" : SystemEntitiesListSerializer(directory.Entities, encoding, formatting, tabulationCount + 1)) + "},");
+            builder.AppendLine($"{innerTabulationBuilder}(uint64:size)={directory.Size},");
+            builder.AppendLine($"{innerTabulationBuilder}(string:parent_path)={directory.Parent.Path},");
+            builder.AppendLine($"{innerTabulationBuilder}(string:hash)={directory.Hash};");
+            builder.Append($"{outerTabulationBuilder}]");
             return builder.ToString();
         }
         #region Serialization Algorithms
@@ -240,18 +257,29 @@ namespace Ipfs.Hypermedia
             }
         }
 
-        private static string SystemEntitiesListSerializer(List<ISystemEntity> entities, Encoding encoding)
+        private static string SystemEntitiesListSerializer(List<ISystemEntity> entities, Encoding encoding, Formatting formatting = Formatting.None, uint tabulationCount = 0)
         {
+            string outerTabulationBuilder = string.Empty;
+            string innerTabulationBuilder = string.Empty;
+            if (formatting == Formatting.Indented)
+            {
+                innerTabulationBuilder += '\t';
+                for (int i = 0; i < tabulationCount; ++i)
+                {
+                    innerTabulationBuilder += '\t';
+                    outerTabulationBuilder += '\t';
+                }
+            }
             StringBuilder builder = new StringBuilder();
             builder.AppendLine("[");
             for (int i = 0; i < entities.Count; ++i)
             {
                 if(entities[i] is File)
-                    builder.AppendLine($"(file:{i})={File.SerializeToString(entities[i] as File, encoding)}{(i == entities.Count - 1 ? ";" : ",")}");
+                    builder.AppendLine($"{innerTabulationBuilder}(file:{i})={File.SerializeToString(entities[i] as File, encoding, formatting, tabulationCount + 1)}{(i == entities.Count - 1 ? ";" : ",")}");
                 else if(entities[i] is Directory)
-                    builder.AppendLine($"(directory:{i})={Directory.SerializeToString(entities[i] as Directory, encoding)}{(i == entities.Count - 1 ? ";" : ",")}");
+                    builder.AppendLine($"{innerTabulationBuilder}(directory:{i})={Directory.SerializeToString(entities[i] as Directory, encoding, formatting, tabulationCount + 1)}{(i == entities.Count - 1 ? ";" : ",")}");
             }
-            builder.Append("]");
+            builder.Append($"{outerTabulationBuilder}]");
             return builder.ToString();
         }
         #endregion Serialization Algorithms
@@ -279,6 +307,8 @@ namespace Ipfs.Hypermedia
             ulong size = 0;
             string parent_path = null;
             string hash = null;
+
+            input = input.Replace("\t", "");
 
             if (!input.StartsWith("["))
                 throw new ArgumentException("Bad formatting in serialized string detected. Expected [ in start.");

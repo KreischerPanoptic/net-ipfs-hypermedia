@@ -1,4 +1,5 @@
 ﻿using Ipfs.Hypermedia.Cryptography;
+using Ipfs.Hypermedia.Tools;
 
 using System;
 using System.Collections.Generic;
@@ -84,15 +85,32 @@ namespace Ipfs.Hypermedia
         /// <param name="block">
         ///   Block to be serialized.
         /// </param>
-        public static string SerializeToString(Block block)
+        /// <param name="formatting">
+        ///   <see cref="Formatting">Formatting</see> options for serialization.
+        /// </param>
+        /// <param name="tabulationCount">
+        ///   Internal argument for count of tabulations.
+        /// </param>
+        public static string SerializeToString(Block block, Formatting formatting = Formatting.None, uint tabulationCount = 0)
         {
+            string outerTabulationBuilder = string.Empty;
+            string innerTabulationBuilder = string.Empty;
+            if(formatting == Formatting.Indented)
+            {
+                innerTabulationBuilder += '\t';
+                for(int i = 0; i < tabulationCount; ++i)
+                {
+                    outerTabulationBuilder += '\t';
+                    innerTabulationBuilder += '\t';
+                }
+            }
             StringBuilder builder = new StringBuilder();
             builder.AppendLine("[");
-            builder.AppendLine($"(string:key)={block.Key},");
-            builder.AppendLine($"(uint64:size)={block.Size},");
-            builder.AppendLine($"(string:parent_path)={block.Parent.Path},");
-            builder.AppendLine($"(string:hash)={block.Hash};");
-            builder.Append("]");
+            builder.AppendLine($"{innerTabulationBuilder}(string:key)={block.Key},");
+            builder.AppendLine($"{innerTabulationBuilder}(uint64:size)={block.Size},");
+            builder.AppendLine($"{innerTabulationBuilder}(string:parent_path)={block.Parent.Path},");
+            builder.AppendLine($"{innerTabulationBuilder}(string:hash)={block.Hash};");
+            builder.Append($"{outerTabulationBuilder}]");
             return builder.ToString();
         }
         /// <summary>
@@ -110,6 +128,8 @@ namespace Ipfs.Hypermedia
             ulong size = 0;
             string parent_path = null;
             string hash = null;
+
+            input = input.Replace("\t", "");
 
             if (!input.StartsWith("["))
                 throw new ArgumentException("Bad formatting in serialized string detected. Expected [ in start.");

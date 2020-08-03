@@ -279,14 +279,17 @@ namespace Ipfs.Hypermedia
         /// <param name="instance">
         ///   The instance of hypermedia that would be serialized.
         /// </param>
+        /// <param name="formatting">
+        ///   <see cref="Formatting">Formatting</see> options for serialization.
+        /// </param>
         /// <returns>
         ///   Task or void. 
         /// </returns>
-        public static async Task SerializeAsync(Stream outputStream, Hypermedia instance)
+        public static async Task SerializeAsync(Stream outputStream, Hypermedia instance, Formatting formatting = Formatting.None)
         {
             await Task.Run(async () =>
             {
-                var buffer = Encoding.UTF8.GetBytes(SerializeToString(instance));
+                var buffer = Encoding.UTF8.GetBytes(SerializeToString(instance, formatting, 0));
                 await outputStream.WriteAsync(buffer, 0, buffer.Length);
             });
         }
@@ -299,12 +302,15 @@ namespace Ipfs.Hypermedia
         /// <param name="instance">
         ///   The instance of hypermedia that would be serialized.
         /// </param>
+        /// <param name="formatting">
+        ///   <see cref="Formatting">Formatting</see> options for serialization.
+        /// </param>
         /// <returns>
         ///   void. 
         /// </returns>
-        public static void Serialize(Stream outputStream, Hypermedia instance)
+        public static void Serialize(Stream outputStream, Hypermedia instance, Formatting formatting = Formatting.None)
         {
-            SerializeAsync(outputStream, instance).ConfigureAwait(false).GetAwaiter().GetResult();
+            SerializeAsync(outputStream, instance, formatting).ConfigureAwait(false).GetAwaiter().GetResult();
         }
         /// <summary>
         ///   Deserializes given stream to hypermedia asynchronously.
@@ -351,47 +357,75 @@ namespace Ipfs.Hypermedia
         /// <param name="hypermedia">
         ///   Hypermedia to be serialized.
         /// </param>
-        public static string SerializeToString(Hypermedia hypermedia)
+        /// <param name="formatting">
+        ///   <see cref="Formatting">Formatting</see> options for serialization.
+        /// </param>
+        /// <param name="tabulationCount">
+        ///   Internal argument for count of tabulations.
+        /// </param>
+        public static string SerializeToString(Hypermedia hypermedia, Formatting formatting = Formatting.None, uint tabulationCount = 0)
         {
+            string outerTabulationBuilder = string.Empty;
+            string innerTabulationBuilder = string.Empty;
+            if (formatting == Formatting.Indented)
+            {
+                innerTabulationBuilder += '\t';
+                for (int i = 0; i < tabulationCount; ++i)
+                {
+                    outerTabulationBuilder += '\t';
+                    innerTabulationBuilder += '\t';
+                }
+            }
             StringBuilder builder = new StringBuilder();
             builder.AppendLine("[");
-            builder.AppendLine($"(string:path)={hypermedia.Path},");
-            builder.AppendLine($"(string:name)={EncodingTools.EncodeString(hypermedia.Name, hypermedia.Encoding is null ? Encoding.UTF8 : hypermedia.Encoding)},");
-            builder.AppendLine($"(string:comment)={(hypermedia.Comment is null ? "null" : EncodingTools.EncodeString(hypermedia.Comment, hypermedia.Encoding is null ? Encoding.UTF8 : hypermedia.Encoding))},");
-            builder.AppendLine($"(encoding:encoding)={(hypermedia.Encoding is null ? "utf-8" : hypermedia.Encoding.WebName)},");
-            builder.AppendLine($"(date_time:created_date_time)={((DateTimeOffset)hypermedia.CreatedDateTime).ToUnixTimeSeconds()},");
-            builder.AppendLine($"(string:created_by)={hypermedia.CreatedBy},");
-            builder.AppendLine($"(string:creator_peer)={(hypermedia.CreatorPeer is null ? "null" : hypermedia.CreatorPeer)},");
+            builder.AppendLine($"{innerTabulationBuilder}(string:path)={hypermedia.Path},");
+            builder.AppendLine($"{innerTabulationBuilder}(string:name)={EncodingTools.EncodeString(hypermedia.Name, hypermedia.Encoding is null ? Encoding.UTF8 : hypermedia.Encoding)},");
+            builder.AppendLine($"{innerTabulationBuilder}(string:comment)={(hypermedia.Comment is null ? "null" : EncodingTools.EncodeString(hypermedia.Comment, hypermedia.Encoding is null ? Encoding.UTF8 : hypermedia.Encoding))},");
+            builder.AppendLine($"{innerTabulationBuilder}(encoding:encoding)={(hypermedia.Encoding is null ? "utf-8" : hypermedia.Encoding.WebName)},");
+            builder.AppendLine($"{innerTabulationBuilder}(date_time:created_date_time)={((DateTimeOffset)hypermedia.CreatedDateTime).ToUnixTimeSeconds()},");
+            builder.AppendLine($"{innerTabulationBuilder}(string:created_by)={hypermedia.CreatedBy},");
+            builder.AppendLine($"{innerTabulationBuilder}(string:creator_peer)={(hypermedia.CreatorPeer is null ? "null" : hypermedia.CreatorPeer)},");
             if (hypermedia.Entities.Count <= 0)
                 throw new Exception("Hypermedia entities list can not be empty");
-            builder.AppendLine($"(list<entity_interface>[{hypermedia.Entities.Count}]:entities)=" + "{" + EntityListSerializer(hypermedia.Entities, hypermedia.Encoding is null ? Encoding.UTF8 : hypermedia.Encoding) + "},");
-            builder.AppendLine($"(boolean:is_directory_wrapped)={(hypermedia.IsDirectoryWrapped ? "true" : "false")},");
-            builder.AppendLine($"(boolean:is_raw_ipfs)={(hypermedia.IsRawIPFS ? "true" : "false")},");
-            builder.AppendLine($"(string:topic)={(hypermedia.Topic is null ? "null" : hypermedia.Topic)},");
-            builder.AppendLine($"(string:default_subscription_message)={(hypermedia.DefaultSubscriptionMessage is null ? "subscribed" : hypermedia.DefaultSubscriptionMessage)},");
-            builder.AppendLine($"(string:default_seeding_message)={(hypermedia.DefaultSeedingMessage is null ? "seeding" : hypermedia.DefaultSeedingMessage)},");
-            builder.AppendLine($"(string:version)={hypermedia.Version},");
-            builder.AppendLine($"(uint64:size)={hypermedia.Size},");
-            builder.AppendLine($"(string:parent_path)={(hypermedia.Parent is null ? "null" : hypermedia.Parent.Path)},");
-            builder.AppendLine($"(string:hash)={hypermedia.Hash};");
-            builder.Append("]");
+            builder.AppendLine($"{innerTabulationBuilder}(list<entity_interface>[{hypermedia.Entities.Count}]:entities)=" + "{" + EntityListSerializer(hypermedia.Entities, hypermedia.Encoding is null ? Encoding.UTF8 : hypermedia.Encoding, formatting, tabulationCount + 1) + "},");
+            builder.AppendLine($"{innerTabulationBuilder}(boolean:is_directory_wrapped)={(hypermedia.IsDirectoryWrapped ? "true" : "false")},");
+            builder.AppendLine($"{innerTabulationBuilder}(boolean:is_raw_ipfs)={(hypermedia.IsRawIPFS ? "true" : "false")},");
+            builder.AppendLine($"{innerTabulationBuilder}(string:topic)={(hypermedia.Topic is null ? "null" : hypermedia.Topic)},");
+            builder.AppendLine($"{innerTabulationBuilder}(string:default_subscription_message)={(hypermedia.DefaultSubscriptionMessage is null ? "subscribed" : hypermedia.DefaultSubscriptionMessage)},");
+            builder.AppendLine($"{innerTabulationBuilder}(string:default_seeding_message)={(hypermedia.DefaultSeedingMessage is null ? "seeding" : hypermedia.DefaultSeedingMessage)},");
+            builder.AppendLine($"{innerTabulationBuilder}(string:version)={hypermedia.Version},");
+            builder.AppendLine($"{innerTabulationBuilder}(uint64:size)={hypermedia.Size},");
+            builder.AppendLine($"{innerTabulationBuilder}(string:parent_path)={(hypermedia.Parent is null ? "null" : hypermedia.Parent.Path)},");
+            builder.AppendLine($"{innerTabulationBuilder}(string:hash)={hypermedia.Hash};");
+            builder.Append($"{outerTabulationBuilder}]");
             return builder.ToString();
         }
         #region Serialization Algorithms
-        private static string EntityListSerializer(List<IEntity> entities, Encoding encoding)
+        private static string EntityListSerializer(List<IEntity> entities, Encoding encoding, Formatting formatting = Formatting.None, uint tabulationCount = 0)
         {
+            string outerTabulationBuilder = string.Empty;
+            string innerTabulationBuilder = string.Empty;
+            if (formatting == Formatting.Indented)
+            {
+                innerTabulationBuilder += '\t';
+                for (int i = 0; i < tabulationCount; ++i)
+                {
+                    innerTabulationBuilder += '\t';
+                    outerTabulationBuilder += '\t';
+                }
+            }
             StringBuilder builder = new StringBuilder();
             builder.AppendLine("[");
             for (int i = 0; i < entities.Count; ++i)
             {
                 if (entities[i] is File)
-                    builder.AppendLine($"(file:{i})={File.SerializeToString(entities[i] as File, encoding)}{(i == entities.Count - 1 ? ";" : ",")}");
+                    builder.AppendLine($"{innerTabulationBuilder}(file:{i})={File.SerializeToString(entities[i] as File, encoding, formatting, tabulationCount + 1)}{(i == entities.Count - 1 ? ";" : ",")}");
                 else if (entities[i] is Directory)
-                    builder.AppendLine($"(directory:{i})={Directory.SerializeToString(entities[i] as Directory, encoding)}{(i == entities.Count - 1 ? ";" : ",")}");
+                    builder.AppendLine($"{innerTabulationBuilder}(directory:{i})={Directory.SerializeToString(entities[i] as Directory, encoding, formatting, tabulationCount + 1)}{(i == entities.Count - 1 ? ";" : ",")}");
                 else if(entities[i] is Hypermedia)
-                    builder.AppendLine($"(hypermedia:{i})={Hypermedia.SerializeToString(entities[i] as Hypermedia)}{(i == entities.Count - 1 ? ";" : ",")}");
+                    builder.AppendLine($"{innerTabulationBuilder}(hypermedia:{i})={Hypermedia.SerializeToString(entities[i] as Hypermedia, formatting, tabulationCount + 1)}{(i == entities.Count - 1 ? ";" : ",")}");
             }
-            builder.Append("]");
+            builder.Append($"{outerTabulationBuilder}]");
             return builder.ToString();
         }
         #endregion Serialization Algorithms
@@ -425,6 +459,8 @@ namespace Ipfs.Hypermedia
             ulong size = 0;
             string parent_path = null;
             string hash = null;
+
+            input = input.Replace("\t", "");
 
             if (!input.StartsWith("["))
                 throw new ArgumentException("Bad formatting in serialized string detected. Expected [ in start.");
