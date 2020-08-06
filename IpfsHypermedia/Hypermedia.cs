@@ -197,7 +197,7 @@ namespace Ipfs.Hypermedia
         ///   It used in clients for choosing correct algorithms of parsing a hypermedia.
         ///   Current default - hypermedia/0.1.0
         /// </remarks>
-        public string Version { get; private set; } = "hypermedia/0.1.0";
+        public string Version { get; private set; } = "hypermedia/0.1.1";
         private const string _startOfEntityListDeclaration = "(list<entity_interface>[";
         private const string _endOfEntityListDeclaration = "},";
         /// <summary>
@@ -454,7 +454,7 @@ namespace Ipfs.Hypermedia
             builder.AppendLine($"{innerTabulationBuilder}(string:creator_peer)={(hypermedia.CreatorPeer is null ? "null" : hypermedia.CreatorPeer)},");
             if (hypermedia.Entities.Count <= 0)
             {
-                throw new Exception("Hypermedia entities list can not be empty");
+                throw new ArgumentException("Hypermedia entities list can not be empty", nameof(hypermedia));
             }
             builder.AppendLine($"{innerTabulationBuilder}{_startOfEntityListDeclaration}{hypermedia.Entities.Count}]:entities)=" + "{" + 
                 (formatting == Formatting.Indented
@@ -512,6 +512,10 @@ namespace Ipfs.Hypermedia
             return builder.ToString();
         }
         #endregion Serialization Algorithms
+        public static Hypermedia DeserializeFromString(string input)
+        {
+            return DeserializeFromString(input, null);
+        }
         /// <summary>
         ///   Deserializes passed string to hypermedia.
         /// </summary>
@@ -522,7 +526,7 @@ namespace Ipfs.Hypermedia
         ///   Parent <see cref="Hypermedia">hypermedia</see> for serialized hypermedia.
         ///   Default - null.
         /// </param>
-        public static Hypermedia DeserializeFromString(string input, Hypermedia parent = null)
+        public static Hypermedia DeserializeFromString(string input, Hypermedia parent)
         {
             string path = null;
             string name = null;

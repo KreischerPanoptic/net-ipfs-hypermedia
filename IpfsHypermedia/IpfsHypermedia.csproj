@@ -5,7 +5,7 @@
     <RootNamespace>Ipfs.Hypermedia</RootNamespace>
     <AssemblyName>Ipfs.Hypermedia</AssemblyName>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Authors>Dennis Soroka</Authors>
     <Company>Dennis Soroka</Company>
     <Description>A self-describing binary metadata format for IPFS entities.
@@ -18,9 +18,14 @@ The Hypermedia aims to create self-describing metadata format, that is easy to d
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression></PackageLicenseExpression>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageIcon>icon.png</PackageIcon>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="..\icon.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
     <None Include="..\LICENSE">
       <Pack>True</Pack>
       <PackagePath></PackagePath>

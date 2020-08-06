@@ -26,7 +26,9 @@ namespace Ipfs.Hypermedia.Cryptography
             }
             int sizeInBytes = SizeInBytes;
             if (buffer == null)
+            {
                 buffer = new byte[sizeInBytes];
+            }
             int stride = sizeInBytes >> 3;
             ulong[] utemps = new ulong[stride];
             if (buffLength == sizeInBytes)

@@ -13,7 +13,7 @@ namespace Ipfs.Hypermedia.Tools
             {
                 if (!isValidationMode)
                 {
-                    throw new ArgumentException("Bad formatting in serialized string detected. Expected [ in start.", "input");
+                    throw new ArgumentException("Bad formatting in serialized string detected. Expected [ in start.", nameof(input));
                 }
                 else
                 {
@@ -24,7 +24,7 @@ namespace Ipfs.Hypermedia.Tools
             {
                 if (!isValidationMode)
                 {
-                    throw new ArgumentException("Bad formatting in serialized string detected. Expected ] in end.", "input");
+                    throw new ArgumentException("Bad formatting in serialized string detected. Expected ] in end.", nameof(input));
                 }
                 else
                 {
@@ -76,7 +76,7 @@ namespace Ipfs.Hypermedia.Tools
             {
                 if (!isValidationMode)
                 {
-                    throw new ArgumentException("Possible serialization error encountered. Hypermedia entities list can not be empty", "input");
+                    throw new ArgumentException("Possible serialization error encountered. Hypermedia entities list can not be empty", nameof(input));
                 }
                 else
                 {
@@ -126,7 +126,9 @@ namespace Ipfs.Hypermedia.Tools
             }
             int start_block_index = input.IndexOf(startString);
             if (!input.Contains("},"))
+            {
                 return false;
+            }
 
             if (!int.TryParse(new string(input.Skip(start_block_index + skipCount).TakeWhile(s => s != ']').ToArray()), out count))
             {
@@ -177,7 +179,7 @@ namespace Ipfs.Hypermedia.Tools
             {
                 if (!isValidationMode)
                 {
-                    throw new ArgumentException("Deserialized parent path is not the expected one", "parent");
+                    throw new ArgumentException("Deserialized parent path is not the expected one", nameof(parent));
                 }
                 else
                 {

@@ -94,7 +94,7 @@ namespace Ipfs.Hypermedia.Cryptography
                     KeccakR = 576;
                     break;
                 default:
-                    throw new ArgumentException("hashBitLength must be 224, 256, 384, or 512", "hashBitLength");
+                    throw new ArgumentException("hashBitLength must be 224, 256, 384, or 512", nameof(hashBitLength));
             }
             RoundConstants = new []
             {
@@ -184,15 +184,15 @@ namespace Ipfs.Hypermedia.Cryptography
         {
             if (array == null)
             {
-                throw new ArgumentNullException("array");
+                throw new ArgumentNullException(nameof(array));
             }
             if (ibStart < 0)
             {
-                throw new ArgumentOutOfRangeException("ibStart");
+                throw new ArgumentOutOfRangeException(nameof(ibStart));
             }
             if (cbSize > array.Length)
             {
-                throw new ArgumentOutOfRangeException("cbSize");
+                throw new ArgumentOutOfRangeException(nameof(cbSize));
             }
             if (ibStart + cbSize > array.Length)
             {
