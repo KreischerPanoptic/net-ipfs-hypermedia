@@ -36,12 +36,12 @@ namespace Ipfs.Hypermedia
         ///   Hash of entity for verification purposes.
         /// </summary>
         string Hash { get; }
+        void SetHash();
         /// <summary>
         ///   Creates and set hash for entity instance.
         /// </summary>
         /// <param name="content">
         ///   Raw bytes of entity if needed in byte array.
-        ///   Default null.
         ///   Only needed for <see cref="File.IsSingleBlock">Single Blocked files</see>.
         /// </param>
         /// <remarks>
@@ -49,13 +49,13 @@ namespace Ipfs.Hypermedia
         ///   but it impossible, due to nature of this library and purposes.
         ///   So, the best approach is to upload a file to IPFS, retrieve it and set content manually.
         /// </remarks>
-        void SetHash(byte[] content = null);
+        void SetHash(byte[] content);
+        string GetHash();
         /// <summary>
         ///   Creates and set hash for entity instance, and returns it as string.
         /// </summary>
         /// <param name="content">
         ///   Raw bytes of entity if needed in byte array.
-        ///   Default null.
         ///   Only needed for <see cref="File.IsSingleBlock">Single Blocked files</see>.
         /// </param>
         /// <remarks>
@@ -63,7 +63,7 @@ namespace Ipfs.Hypermedia
         ///   but it impossible, due to nature of this library and purposes.
         ///   So, the best approach is to upload a file to IPFS, retrieve it and set content manually.
         /// </remarks>
-        string GetHash(byte[] content = null);
+        string GetHash(byte[] content);
         /// <summary>
         ///   Link to parent entity in which this entity resides.
         /// </summary>

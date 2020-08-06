@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Ipfs.Hypermedia.Tools
 {
-    internal class EncodingTools
+    internal static class EncodingTools
     {
         public static string EncodeString(string input, Encoding encoding)
         {
@@ -22,7 +22,6 @@ namespace Ipfs.Hypermedia.Tools
 
         public static string DecodeString(string input, Encoding encoding)
         {
-            var bytes = encoding.GetBytes(input);
             List<byte> buffer = new List<byte>();
             string tmp = input + ' ';
             while(tmp != String.Empty)

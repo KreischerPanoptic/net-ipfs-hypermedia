@@ -33,13 +33,19 @@ namespace Ipfs.Hypermedia
                 if (value != null)
                 {
                     if (value.Length > 255)
-                        throw new Exception("Directory name can not have more than 255 symbols");
+                    {
+                        throw new ArgumentException("Directory name can not have more than 255 symbols");
+                    }
                     if (value.Length <= 0)
-                        throw new Exception("Directory name can not be empty");
+                    {
+                        throw new ArgumentException("Directory name can not be empty");
+                    }
                     _name = value;
                 }
                 else
-                    throw new Exception("Directory name can not be null");
+                {
+                    throw new ArgumentException("Directory name can not be null");
+                }
             }
         }
         private FileAttributes? _attributes;
@@ -56,15 +62,24 @@ namespace Ipfs.Hypermedia
             set
             {
                 if (!value.HasValue)
+                {
                     _attributes = value;
-                else if (value.Value == FileAttributes.Directory)
-                    _attributes = value;
-                else if (value.Value == (FileAttributes.Directory| FileAttributes.Hidden) || value.Value == (FileAttributes.Directory | FileAttributes.ReadOnly))
-                    _attributes = value;
-                else if (value.Value == (FileAttributes.Directory | FileAttributes.Hidden | FileAttributes.ReadOnly))
-                    _attributes = value;
+                }
                 else
-                    throw new Exception("Directory attributes can be only Directory, Directory|Hidden, Directory|Read-Only and Directory|Hidden|Read-Only");
+                {
+                    switch (value.Value)
+                    {
+                        case FileAttributes.Directory:
+                        case FileAttributes.Directory | FileAttributes.Hidden:
+                        case FileAttributes.Directory | FileAttributes.ReadOnly:
+                        case FileAttributes.Directory | FileAttributes.Hidden | FileAttributes.ReadOnly:
+                            _attributes = value;
+                            break;
+                        default:
+                            throw new ArgumentException("Directory attributes can be only Directory, Directory|Hidden, Directory|Read-Only and Directory|Hidden|Read-Only");
+
+                    }
+                }
             }
         }
         private DateTime? _lastModifiedDateTime;
@@ -81,9 +96,13 @@ namespace Ipfs.Hypermedia
             set
             {
                 if (!value.HasValue)
+                {
                     _lastModifiedDateTime = value;
+                }
                 else
+                {
                     _lastModifiedDateTime = value.Value.ToUniversalTime();
+                }
             }
         }
         /// <summary>
@@ -103,7 +122,7 @@ namespace Ipfs.Hypermedia
         /// <summary>
         ///   Hash of directory for verification purposes.
         /// </summary>
-        public string Hash { get; private set; } = null;
+        public string Hash { get; private set; }
         private IEntity _parent;
         /// <summary>
         ///   Link to parent entity in which this directory resides.
@@ -121,12 +140,25 @@ namespace Ipfs.Hypermedia
                 if (value != null)
                 {
                     if (value is File)
+                    {
                         throw new ArgumentException("File can't be parent of the directory!");
+                    }
                     _parent = value;
                 }
                 else
+                {
                     throw new ArgumentException("Parent must be set for directory!");
+                }
             }
+        }
+        private const string _startOfSystemEntityListDeclaration = "(list<system_entity_interface>[";
+        private const string _endOfSystemEntityListDeclaration = "},";
+        /// <summary>
+        ///   Creates and set hash for directory instance.
+        /// </summary>
+        public void SetHash()
+        {
+            SetHash(null);
         }
         /// <summary>
         ///   Creates and set hash for directory instance.
@@ -139,7 +171,7 @@ namespace Ipfs.Hypermedia
         ///   Preferable method is adding files with single part to directory after setting hash for this file.
         /// </remarks>
         /// <exception cref="Exception"/>
-        public void SetHash(byte[] content = null)
+        public void SetHash(byte[] content)
         {
             if (Hash is null)
             {
@@ -154,10 +186,14 @@ namespace Ipfs.Hypermedia
                 List<string> entitesHashes = new List<string>();
                 foreach (var e in Entities)
                 {
-                    if(e is File)
+                    if (e is File)
+                    {
                         entitesHashes.Add((e as File).GetHash());
-                    else if(e is Directory)
+                    }
+                    else if (e is Directory)
+                    {
                         entitesHashes.Add((e as Directory).GetHash());
+                    }
                 }
                 List<byte> buffer = new List<byte>();
                 buffer.AddRange((parent as Hypermedia).Encoding.GetBytes(Name));
@@ -177,8 +213,15 @@ namespace Ipfs.Hypermedia
             }
             else
             {
-                throw new Exception("Hash can only be set once");
+                throw new AccessViolationException("Hash can only be set once");
             }
+        }
+        /// <summary>
+        ///   Creates and set hash for directory instance, and returns it as string.
+        /// </summary>
+        public string GetHash()
+        {
+            return GetHash(null);
         }
         /// <summary>
         ///   Creates and set hash for directory instance, and returns it as string.
@@ -190,11 +233,27 @@ namespace Ipfs.Hypermedia
         ///   You should never manually set content parameter of GetHash for Directory.
         ///   Preferable method is adding files with single part to directory after setting hash for this file.
         /// </remarks>
-        public string GetHash(byte[] content = null)
+        public string GetHash(byte[] content)
         {
             if (Hash is null)
+            {
                 SetHash();
+            }
             return Hash;
+        }
+        /// <summary>
+        ///   Serializes passed directory to string using passed encoding.
+        /// </summary>
+        /// <param name="directory">
+        ///   Directory to be serialized.
+        /// </param>
+        /// <param name="encoding">
+        ///   Encoding used for serialization of directory name.
+        ///   Usually passed from parent <see cref="Hypermedia">hypermedia</see> where directory resides.
+        /// </param>
+        public static string SerializeToString(Directory directory, Encoding encoding)
+        {
+            return SerializeToString(directory, encoding, Formatting.None, 0);
         }
         /// <summary>
         ///   Serializes passed directory to string using passed encoding.
@@ -212,37 +271,29 @@ namespace Ipfs.Hypermedia
         /// <param name="tabulationCount">
         ///   Internal argument for count of tabulations.
         /// </param>
-        public static string SerializeToString(Directory directory, Encoding encoding, Formatting formatting = Formatting.None, uint tabulationCount = 0)
+        public static string SerializeToString(Directory directory, Encoding encoding, Formatting formatting, uint tabulationsCount)
         {
             string outerTabulationBuilder = string.Empty;
             string innerTabulationBuilder = string.Empty;
             if (formatting == Formatting.Indented)
             {
-                innerTabulationBuilder += '\t';
-                for (int i = 0; i < tabulationCount; ++i)
-                {
-                    outerTabulationBuilder += '\t';
-                    innerTabulationBuilder += '\t';
-                }
+                SerializationTools.InitTabulations(out outerTabulationBuilder, out innerTabulationBuilder, tabulationsCount);
             }
             StringBuilder builder = new StringBuilder();
-            builder.AppendLine("[");
-            builder.AppendLine($"{innerTabulationBuilder}(string:path)={directory.Path},");
-            builder.AppendLine($"{innerTabulationBuilder}(string:name)={EncodingTools.EncodeString(directory.Name, encoding)},");
+            SerializationTools.InitStartBaseSystemEntitySerializationStrings(ref builder, directory, encoding, outerTabulationBuilder, innerTabulationBuilder);
             builder.AppendLine($"{innerTabulationBuilder}(file_attributes_null:attributes)={FileAttributesSerializer(directory.Attributes)},");
             builder.AppendLine($"{innerTabulationBuilder}(date_time_null:last_modified_date_time)={(directory.LastModifiedDateTime is null ? "null" : ((DateTimeOffset)directory.LastModifiedDateTime.Value).ToUnixTimeSeconds().ToString())},");
-            builder.AppendLine($"{innerTabulationBuilder}(list<system_entity_interface>[{directory.Entities.Count}]:entities)=" + "{" + (directory.Entities.Count <= 0 ? "empty;" : SystemEntitiesListSerializer(directory.Entities, encoding, formatting, tabulationCount + 1)) + "},");
-            builder.AppendLine($"{innerTabulationBuilder}(uint64:size)={directory.Size},");
-            builder.AppendLine($"{innerTabulationBuilder}(string:parent_path)={directory.Parent.Path},");
-            builder.AppendLine($"{innerTabulationBuilder}(string:hash)={directory.Hash};");
-            builder.Append($"{outerTabulationBuilder}]");
+            builder.AppendLine($"{innerTabulationBuilder}{_startOfSystemEntityListDeclaration}{directory.Entities.Count}]:entities)=" + "{" + (directory.Entities.Count <= 0 ? "empty;" : (formatting == Formatting.Indented ? SystemEntitiesListSerializer(directory.Entities, encoding, formatting, tabulationsCount + 1) : SystemEntitiesListSerializer(directory.Entities, encoding))) + $"{_endOfSystemEntityListDeclaration}");
+            SerializationTools.InitEndBaseSerializationStrings(ref builder, directory, outerTabulationBuilder, innerTabulationBuilder);
             return builder.ToString();
         }
         #region Serialization Algorithms
         private static string FileAttributesSerializer(FileAttributes? attributes)
         {
             if (attributes is null)
+            {
                 return "null";
+            }
             switch (attributes.Value)
             {
                 case FileAttributes.Directory | FileAttributes.Hidden:
@@ -256,28 +307,30 @@ namespace Ipfs.Hypermedia
                     return "directory";
             }
         }
-
-        private static string SystemEntitiesListSerializer(List<ISystemEntity> entities, Encoding encoding, Formatting formatting = Formatting.None, uint tabulationCount = 0)
+        private static string SystemEntitiesListSerializer(List<ISystemEntity> entities, Encoding encoding)
+        {
+            return SystemEntitiesListSerializer(entities, encoding, Formatting.None, 0);
+        }
+        private static string SystemEntitiesListSerializer(List<ISystemEntity> entities, Encoding encoding, Formatting formatting, uint tabulationsCount)
         {
             string outerTabulationBuilder = string.Empty;
             string innerTabulationBuilder = string.Empty;
             if (formatting == Formatting.Indented)
             {
-                innerTabulationBuilder += '\t';
-                for (int i = 0; i < tabulationCount; ++i)
-                {
-                    innerTabulationBuilder += '\t';
-                    outerTabulationBuilder += '\t';
-                }
+                SerializationTools.InitTabulations(out outerTabulationBuilder, out innerTabulationBuilder, tabulationsCount);
             }
             StringBuilder builder = new StringBuilder();
             builder.AppendLine("[");
             for (int i = 0; i < entities.Count; ++i)
             {
-                if(entities[i] is File)
-                    builder.AppendLine($"{innerTabulationBuilder}(file:{i})={File.SerializeToString(entities[i] as File, encoding, formatting, tabulationCount + 1)}{(i == entities.Count - 1 ? ";" : ",")}");
-                else if(entities[i] is Directory)
-                    builder.AppendLine($"{innerTabulationBuilder}(directory:{i})={Directory.SerializeToString(entities[i] as Directory, encoding, formatting, tabulationCount + 1)}{(i == entities.Count - 1 ? ";" : ",")}");
+                if (entities[i] is File)
+                {
+                    builder.AppendLine($"{innerTabulationBuilder}(file:{i})={(formatting == Formatting.Indented ? File.SerializeToString(entities[i] as File, encoding, formatting, tabulationsCount + 1) : File.SerializeToString(entities[i] as File, encoding))}{(i == entities.Count - 1 ? ";" : ",")}");
+                }
+                else if (entities[i] is Directory)
+                {
+                    builder.AppendLine($"{innerTabulationBuilder}(directory:{i})={(formatting == Formatting.Indented ? SerializeToString(entities[i] as Directory, encoding, formatting, tabulationsCount + 1) : SerializeToString(entities[i] as Directory, encoding))}{(i == entities.Count - 1 ? ";" : ",")}");
+                }
             }
             builder.Append($"{outerTabulationBuilder}]");
             return builder.ToString();
@@ -308,33 +361,23 @@ namespace Ipfs.Hypermedia
             string parent_path = null;
             string hash = null;
 
-            input = input.Replace("\t", "");
+            DeserializationTools.CheckStringFormat(input, false);
 
-            if (!input.StartsWith("["))
-                throw new ArgumentException("Bad formatting in serialized string detected. Expected [ in start.");
-            if (!input.EndsWith("]"))
-                throw new ArgumentException("Bad formatting in serialized string detected. Expected ] in end.");
+            string entitiesList;
+            int count;
+            List<string> stringList;
 
-            input = input.TrimStart('[').TrimEnd(']').TrimStart('\r').TrimEnd('\n').TrimStart('\n');
+            DeserializationTools.SplitStringForSystemEntity(input, _startOfSystemEntityListDeclaration, _endOfSystemEntityListDeclaration, 31, out count, out entitiesList, out stringList, false);
 
-            string entitiesList = ExtractSerializedSystemEntitiesList(input);
-            int count = SystemEntitiesListCount(input);
-            input = RemoveSystemEntitiesList(input);
-            var stringList = input.Split('\n').ToList();
-
-            path = new string(stringList[0].Skip(14).TakeWhile(x => x != ',').ToArray());
-            name = EncodingTools.DecodeString(new string(stringList[1].Skip(14).TakeWhile(x => x != ',').ToArray()), encoding);
+            DeserializationTools.ParseStartBaseSystemEntitySerializationString(stringList, encoding, out path, out name);
             attributes = FileAttributesDeserializer(new string(stringList[2].Skip(34).TakeWhile(x => x != ',').ToArray()));
             lastModDateTime = long.Parse(new string(stringList[3].Skip(41).TakeWhile(x => x != ',').ToArray()));
             lastModifiedDateTime = DateTimeOffset.FromUnixTimeSeconds(lastModDateTime).UtcDateTime;
-            size = ulong.Parse(new string(stringList[4].Skip(14).TakeWhile(x => x != ',').ToArray()));
-            parent_path = new string(stringList[5].Skip(21).TakeWhile(x => x != ',').ToArray());
-            hash = new string(stringList[6].Skip(14).TakeWhile(x => x != ';').ToArray());
+            DeserializationTools.ParseEndBaseSerializationString(stringList, 4, out size, out parent_path, out hash);
 
-            if (parent.Path != parent_path)
-                throw new ArgumentException("Deserialized parent path is not the expected one");
+            DeserializationTools.CheckParent(parent, parent_path, false);
 
-            Directory directory = new Directory()
+            Directory directory = new Directory
             {
                 Path = path,
                 Name = name,
@@ -345,7 +388,9 @@ namespace Ipfs.Hypermedia
                 Hash = hash
             };
             if (count != 0)
+            {
                 entities = SystemEntitiesListDeserializer(entitiesList, directory, count, encoding);
+            }
 
             directory.Entities = entities;
             return directory;
@@ -354,7 +399,9 @@ namespace Ipfs.Hypermedia
         private static FileAttributes? FileAttributesDeserializer(string input)
         {
             if (input == "null")
+            {
                 return null;
+            }
             switch (input)
             {
                 case "directory|hidden":
@@ -373,22 +420,23 @@ namespace Ipfs.Hypermedia
         {
             List<ISystemEntity> entities = new List<ISystemEntity>();
 
-            if (!input.StartsWith("["))
-                throw new ArgumentException("Bad formatting in serialized string detected. Expected [ in start.");
-            if (!input.EndsWith("]"))
-                throw new ArgumentException("Bad formatting in serialized string detected. Expected ] in end.");
+            DeserializationTools.CheckStringFormat(input, false);
 
             input = input.TrimStart('[').TrimEnd(']').TrimStart('\r').TrimEnd('\n').TrimStart('\n').TrimEnd('\r');
             var stringList = SplitSystemEntitiesList(input, parent);
             if (stringList.Count != count)
-                throw new Exception("Parsed string list does not match expected length");
+            {
+                throw new ArgumentException("Parsed string list does not match expected length", "count");
+            }
 
             for(int i = 0; i < count; ++i)
             {
                 string type = new string(stringList[i].Skip(1).TakeWhile(s => s != ':').ToArray());
                 int index = int.Parse(new string(stringList[i].Skip(type.Length + 2).TakeWhile(s => s != ')').ToArray()));
                 if (index != i)
-                    throw new Exception("Possible serialization error encountered. Unexpected sequence");
+                {
+                    throw new ArgumentException("Possible serialization error encountered. Unexpected sequence", "input");
+                }
                 switch (type)
                 {
                     case "file":
@@ -398,12 +446,14 @@ namespace Ipfs.Hypermedia
                         entities.Add(Directory.DeserializeFromString(new string(stringList[i].SkipWhile(s => s != '[').ToArray()), parent, encoding));
                         break;
                     default:
-                        throw new Exception("Possible serialization error encountered. Unexpected type");
+                        throw new ArgumentException("Possible serialization error encountered. Unexpected type", "input");
                 }
             }
 
             if (count != entities.Count)
-                throw new Exception("Serialized and deserialized collection length does not match");
+            {
+                throw new ArgumentException("Serialized and deserialized collection length does not match", "count");
+            }
 
             return entities;
         }
@@ -430,9 +480,13 @@ namespace Ipfs.Hypermedia
                             isStringValid = File.IsSerializedStringValid(toReturn, parent);
                             string tmpEntity = new string(tmpInput.TakeWhile(s => s != '[').ToArray()) + toReturn;
                             if (tmpEntity.Length == tmpInput.Length)
-                                throw new Exception("Possible serialization error encountered. Unexpected input.");
+                            {
+                                throw new ArgumentException("Possible serialization error encountered. Unexpected input.", "input");
+                            }
                             if (!isStringValid)
+                            {
                                 toReturn += new string(tmpInput.Skip(new string(tmpInput.TakeWhile(s => s != '[').ToArray()).Length + toReturn.Length).Take(1).ToArray());
+                            }
                         }
                         while (!isStringValid);
                         break;
@@ -443,68 +497,29 @@ namespace Ipfs.Hypermedia
                             isStringValid = Directory.IsSerializedStringValid(toReturn, parent);
                             string tmpEntity = new string(tmpInput.TakeWhile(s => s != '[').ToArray()) + toReturn;
                             if (tmpEntity.Length == tmpInput.Length)
-                                throw new Exception("Possible serialization error encountered. Unexpected input.");
+                            {
+                                throw new ArgumentException("Possible serialization error encountered. Unexpected input.", "input");
+                            }
                             if (!isStringValid)
+                            {
                                 toReturn += new string(tmpInput.Skip(new string(tmpInput.TakeWhile(s => s != '[').ToArray()).Length + toReturn.Length).Take(1).ToArray());
+                            }
                         }
                         while (!isStringValid);
                         break;
                     default:
-                        throw new Exception("Possible serialization error encountered. Unexpected type");
+                        throw new ArgumentException("Possible serialization error encountered. Unexpected type", "input");
 
                 }
                 string entity = new string(tmpInput.TakeWhile(s => s != '[').ToArray()) + toReturn;
                 entities.Add(entity);
                 tmpInput = tmpInput.Remove(0, entity.Length + 3);
                 if (tmpInput == string.Empty)
+                {
                     isProcessed = true;
+                }
             }
             return entities;
-        }
-
-        private static string RemoveSystemEntitiesList(string input)
-        {
-            string redacted = null;
-
-            int start_block_index = input.IndexOf("(list<system_entity_interface>[");
-            int end_block_index = input.LastIndexOf("},");
-            redacted = input.Remove(start_block_index - 1,
-                    (end_block_index + 3) - start_block_index - 1);
-            return redacted;
-        }
-
-        private static string ExtractSerializedSystemEntitiesList(string input)
-        {
-            string extracted = null;
-
-            int start_block_index = input.IndexOf("(list<system_entity_interface>[");
-            int end_block_index = input.LastIndexOf("},");
-
-            int count = int.Parse(new string(input.Skip(start_block_index + 31).TakeWhile(s => s != ']').ToArray()));
-            if (count != 0)
-            {
-                extracted = new string
-                (
-                    input.Skip
-                    (
-                        start_block_index + input.Skip(start_block_index)
-                        .TakeWhile(s => s != '{').ToArray().Length + 1
-                    ).Take(
-                        (end_block_index - 2) - (start_block_index + input.Skip(start_block_index)
-                        .TakeWhile(s => s != '{').Skip(1).ToArray().Length)
-                    ).ToArray()
-                );
-            }
-            return extracted;
-        }
-
-        private static int SystemEntitiesListCount(string input)
-        {
-            int start_block_index = input.IndexOf("(list<system_entity_interface>[");
-            int end_block_index = input.LastIndexOf("},");
-
-            int count = int.Parse(new string(input.Skip(start_block_index + 31).TakeWhile(s => s != ']').ToArray()));
-            return count;
         }
         #endregion Deserialization Algorithms
         #region Validation
@@ -513,102 +528,138 @@ namespace Ipfs.Hypermedia
             long lastModDateTime = 0;
             ulong size = 0;
 
-            if (!input.StartsWith("["))
+            if (!DeserializationTools.CheckStringFormat(input, true))
+            {
                 return false;
-            if (!input.EndsWith("]"))
+            }
+
+            int count;
+            string entitiesList;
+            List<string> stringList;
+
+            if(!DeserializationTools.SplitStringForSystemEntity(input, _startOfSystemEntityListDeclaration, _endOfSystemEntityListDeclaration, 31, out count, out entitiesList, out stringList, false))
+            {
                 return false;
+            }
 
-            string tmp = input.TrimStart('[').TrimEnd(']').TrimStart('\r').TrimEnd('\n').TrimStart('\n');
-
-            int count = -1;
-            if (!TryParseSystemEntitiesListCount(tmp, out count))
-                return false;
-            string entityList = ExtractSerializedSystemEntitiesList(tmp);
-            tmp = RemoveSystemEntitiesList(tmp);
-
-            var stringList = tmp.Split('\n').ToList();
             if (stringList.Count != 7)
-                return false;
-
-            foreach (var s in stringList)
             {
-                if (!s.StartsWith("("))
-                    return false;
+                return false;
             }
 
-            for (int i = 0; i < 6; ++i)
+            if (!DeserializationTools.ValidateStartOfStrings(stringList))
             {
-                if (!stringList[i].EndsWith(",\r"))
-                    return false;
-            }
-            if (!stringList[6].EndsWith(";\r"))
                 return false;
+            }
+
+            if (!DeserializationTools.ValidateEndOfStrings(stringList, 6))
+            {
+                return false;
+            }
 
             //0
             if ((new string(stringList[0].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[0].Skip(8).TakeWhile(x => x != ')').ToArray())) != "path")
+            {
                 return false;
+            }
             //1
             if ((new string(stringList[1].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[1].Skip(8).TakeWhile(x => x != ')').ToArray())) != "name")
+            {
                 return false;
+            }
             //2
             if ((new string(stringList[2].Skip(1).TakeWhile(x => x != ':').ToArray())) != "file_attributes_null")
+            {
                 return false;
+            }
 
             if ((new string(stringList[2].Skip(22).TakeWhile(x => x != ')').ToArray())) != "attributes")
+            {
                 return false;
+            }
             //3
             if ((new string(stringList[3].Skip(1).TakeWhile(x => x != ':').ToArray())) != "date_time_null")
+            {
                 return false;
+            }
 
             if ((new string(stringList[3].Skip(16).TakeWhile(x => x != ')').ToArray())) != "last_modified_date_time")
+            {
                 return false;
+            }
             //4
             if ((new string(stringList[4].Skip(1).TakeWhile(x => x != ':').ToArray())) != "uint64")
+            {
                 return false;
+            }
 
             if ((new string(stringList[4].Skip(8).TakeWhile(x => x != ')').ToArray())) != "size")
+            {
                 return false;
+            }
             //5
             if ((new string(stringList[5].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[5].Skip(8).TakeWhile(x => x != ')').ToArray())) != "parent_path")
+            {
                 return false;
+            }
             //6
             if ((new string(stringList[6].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[6].Skip(8).TakeWhile(x => x != ')').ToArray())) != "hash")
+            {
                 return false;
+            }
             //TryParse
             if (!long.TryParse(new string(stringList[3].Skip(41).TakeWhile(x => x != ',').ToArray()), out lastModDateTime))
+            {
                 return false;
+            }
 
             if (!ulong.TryParse(new string(stringList[4].Skip(14).TakeWhile(x => x != ',').ToArray()), out size))
+            {
                 return false;
+            }
 
             string path = new string(stringList[0].Skip(14).TakeWhile(x => x != ',').ToArray());
 
             string parent_path = new string(stringList[5].Skip(21).TakeWhile(x => x != ',').ToArray());
-            if (parent.Path != parent_path)
+            if (!DeserializationTools.CheckParent(parent, parent_path, true))
+            {
                 return false;
+            }
 
-            Directory directory = new Directory()
+            Directory directory = new Directory
             {
                 Path = path
             };
             bool isEntitiesValid = true;
             if (count > 0)
-                isEntitiesValid = TrySystemEntitiesListDeserializer(entityList, directory, count);
+            {
+                isEntitiesValid = TrySystemEntitiesListDeserializer(entitiesList, directory, count);
+            }
 
             if (!isEntitiesValid)
+            {
                 return false;
+            }
 
             return true;
         }
@@ -617,18 +668,22 @@ namespace Ipfs.Hypermedia
         {
             List<ISystemEntity> entities = new List<ISystemEntity>();
 
-            if (!input.StartsWith("["))
+            if (!DeserializationTools.CheckStringFormat(input, true))
+            {
                 return false;
-            if (!input.EndsWith("]"))
-                return false;
+            }
 
             input = input.TrimStart('[').TrimEnd(']').TrimStart('\r').TrimEnd('\n').TrimStart('\n').TrimEnd('\r');
             List<string> stringList = new List<string>();
             bool isEntitiesValid = TrySplitSystemEntitiesList(input, parent, out stringList);
             if (!isEntitiesValid)
+            {
                 return false;
+            }
             if (stringList.Count != count)
+            {
                 return false;
+            }
 
             bool result = true;
             for (int i = 0; i < count; ++i)
@@ -636,16 +691,22 @@ namespace Ipfs.Hypermedia
                 string type = new string(stringList[i].Skip(1).TakeWhile(s => s != ':').ToArray());
                 int index = int.Parse(new string(stringList[i].Skip(type.Length + 2).TakeWhile(s => s != ')').ToArray()));
                 if (index != i)
+                {
                     return false;
+                }
                 switch (type)
                 {
                     case "file":
                         if (!File.IsSerializedStringValid(new string(stringList[i].SkipWhile(s => s != '[').ToArray()), parent))
+                        {
                             result = false;
+                        }
                         break;
                     case "directory":
                         if (!Directory.IsSerializedStringValid(new string(stringList[i].SkipWhile(s => s != '[').ToArray()), parent))
+                        {
                             result = false;
+                        }
                         break;
                     default:
                         return false;
@@ -676,9 +737,13 @@ namespace Ipfs.Hypermedia
                         {
                             isStringValid = File.IsSerializedStringValid(toReturn, parent);
                             if ((new string(tmpInput.TakeWhile(s => s != '[').ToArray()) + toReturn).Length == tmpInput.Length)
+                            {
                                 return false;
+                            }
                             if (!isStringValid)
+                            {
                                 toReturn += new string(tmpInput.Skip(new string(tmpInput.TakeWhile(s => s != '[').ToArray()).Length + toReturn.Length).Take(1).ToArray());
+                            }
                         }
                         while (!isStringValid);
                         break;
@@ -688,9 +753,13 @@ namespace Ipfs.Hypermedia
                         {
                             isStringValid = Directory.IsSerializedStringValid(toReturn, parent);
                             if ((new string(tmpInput.TakeWhile(s => s != '[').ToArray()) + toReturn).Length == tmpInput.Length)
+                            {
                                 return false;
+                            }
                             if (!isStringValid)
+                            {
                                 toReturn += new string(tmpInput.Skip(new string(tmpInput.TakeWhile(s => s != '[').ToArray()).Length + toReturn.Length).Take(1).ToArray());
+                            }
                         }
                         while (!isStringValid);
                         break;
@@ -703,25 +772,11 @@ namespace Ipfs.Hypermedia
                 int il = tmpInput.Length;
                 tmpInput = tmpInput.Remove(0, entity.Length + 3);
                 if (tmpInput == string.Empty)
+                {
                     isProcessed = true;
+                }
             }
-            if (entities.Count <= 0)
-                return false;
-            return true;
-        }
 
-        private static bool TryParseSystemEntitiesListCount(string input, out int count)
-        {
-            count = -1;
-            if (!input.Contains("(list<system_entity_interface>["))
-                return false;
-            int start_block_index = input.IndexOf("(list<system_entity_interface>[");
-            if (!input.Contains("},"))
-                return false;
-            int end_block_index = input.IndexOf("},");
-
-            if (!int.TryParse(new string(input.Skip(start_block_index + 31).TakeWhile(s => s != ']').ToArray()), out count))
-                return false;
             return true;
         }
         #endregion Validation

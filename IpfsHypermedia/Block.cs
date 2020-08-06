@@ -40,15 +40,19 @@ namespace Ipfs.Hypermedia
             set
             {
                 if (value is null)
+                {
                     throw new ArgumentException("Parent must be set for block!");
+                }
                 else
+                {
                     _parent = value;
+                }
             } 
         }
         /// <summary>
         ///   Hash of block for verification purposes.
         /// </summary>
-        public string Hash { get; private set; } = null;
+        public string Hash { get; private set; }
         /// <summary>
         ///   Creates and set hash for block instance.
         /// </summary>
@@ -76,8 +80,18 @@ namespace Ipfs.Hypermedia
             }
             else
             {
-                throw new Exception("Hash can only be set once");
+                throw new AccessViolationException("Hash can only be set once");
             }
+        }
+        /// <summary>
+        ///   Serializes passed block to string.
+        /// </summary>
+        /// <param name="block">
+        ///   Block to be serialized.
+        /// </param>
+        public static string SerializeToString(Block block)
+        {
+            return SerializeToString(block, Formatting.None, 0);
         }
         /// <summary>
         ///   Serializes passed block to string.
@@ -91,26 +105,18 @@ namespace Ipfs.Hypermedia
         /// <param name="tabulationCount">
         ///   Internal argument for count of tabulations.
         /// </param>
-        public static string SerializeToString(Block block, Formatting formatting = Formatting.None, uint tabulationCount = 0)
+        public static string SerializeToString(Block block, Formatting formatting, uint tabulationsCount)
         {
             string outerTabulationBuilder = string.Empty;
             string innerTabulationBuilder = string.Empty;
             if(formatting == Formatting.Indented)
             {
-                innerTabulationBuilder += '\t';
-                for(int i = 0; i < tabulationCount; ++i)
-                {
-                    outerTabulationBuilder += '\t';
-                    innerTabulationBuilder += '\t';
-                }
+                SerializationTools.InitTabulations(out outerTabulationBuilder, out innerTabulationBuilder, tabulationsCount);
             }
             StringBuilder builder = new StringBuilder();
             builder.AppendLine("[");
             builder.AppendLine($"{innerTabulationBuilder}(string:key)={block.Key},");
-            builder.AppendLine($"{innerTabulationBuilder}(uint64:size)={block.Size},");
-            builder.AppendLine($"{innerTabulationBuilder}(string:parent_path)={block.Parent.Path},");
-            builder.AppendLine($"{innerTabulationBuilder}(string:hash)={block.Hash};");
-            builder.Append($"{outerTabulationBuilder}]");
+            SerializationTools.InitEndBaseSerializationStrings(ref builder, block, outerTabulationBuilder, innerTabulationBuilder);
             return builder.ToString();
         }
         /// <summary>
@@ -129,81 +135,86 @@ namespace Ipfs.Hypermedia
             string parent_path = null;
             string hash = null;
 
-            input = input.Replace("\t", "");
+            DeserializationTools.CheckStringFormat(input, false);
 
-            if (!input.StartsWith("["))
-                throw new ArgumentException("Bad formatting in serialized string detected. Expected [ in start.");
-            if(!input.EndsWith("]"))
-                throw new ArgumentException("Bad formatting in serialized string detected. Expected ] in end.");
-
-            input = input.TrimStart('[').TrimEnd(']').TrimStart('\r').TrimEnd('\n').TrimStart('\n');
-            var stringList = input.Split('\n').ToList();
+            var stringList = DeserializationTools.SplitStringForBlock(input);
 
             key = new string(stringList[0].Skip(13).TakeWhile(x => x != ',').ToArray());
-            size = ulong.Parse(new string(stringList[1].Skip(14).TakeWhile(x => x != ',').ToArray()));
-            parent_path = new string(stringList[2].Skip(21).TakeWhile(x => x != ',').ToArray());
-            hash = new string(stringList[3].Skip(14).TakeWhile(x => x != ';').ToArray());
+            DeserializationTools.ParseEndBaseSerializationString(stringList, 1, out size, out parent_path, out hash);
 
-            if (parent.Path != parent_path)
-                throw new ArgumentException("Deserialized parent path is not the expected one");
+            DeserializationTools.CheckParent(parent, parent_path, false);
 
-            return new Block() { Key = key, Size = size, Parent = parent, Hash = hash };
+            return new Block { Key = key, Size = size, Parent = parent, Hash = hash };
         }
         #region Validation
         public static bool IsSerializedStringValid(string input, File parent)
         {
-            if (!input.StartsWith("["))
+            if(!DeserializationTools.CheckStringFormat(input, true))
+            {
                 return false;
-            if (!input.EndsWith("]"))
-                return false;
+            }
 
-            string tmp = input.TrimStart('[').TrimEnd(']').TrimStart('\r').TrimEnd('\n').TrimStart('\n');
-            var stringList = tmp.Split('\n').ToList();
+            var stringList = DeserializationTools.SplitStringForBlock(input);
             if (stringList.Count != 4)
-                return false;
-
-            foreach (var s in stringList)
             {
-                if (!s.StartsWith("("))
-                    return false;
+                return false;
             }
 
-            for(int i = 0; i < 3; ++i)
+            if (!DeserializationTools.ValidateStartOfStrings(stringList))
             {
-                if (!stringList[i].EndsWith(",\r"))
-                    return false;
-            }
-            if (!stringList[3].EndsWith(";\r"))
                 return false;
+            }
+
+            if (!DeserializationTools.ValidateEndOfStrings(stringList, 3))
+            {
+                return false;
+            }
 
             if ((new string(stringList[0].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[0].Skip(8).TakeWhile(x => x != ')').ToArray())) != "key")
+            {
                 return false;
+            }
 
             if ((new string(stringList[1].Skip(1).TakeWhile(x => x != ':').ToArray())) != "uint64")
+            {
                 return false;
+            }
 
             if ((new string(stringList[1].Skip(8).TakeWhile(x => x != ')').ToArray())) != "size")
+            {
                 return false;
+            }
 
             if ((new string(stringList[2].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[2].Skip(8).TakeWhile(x => x != ')').ToArray())) != "parent_path")
+            {
                 return false;
+            }
 
             if ((new string(stringList[3].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[3].Skip(8).TakeWhile(x => x != ')').ToArray())) != "hash")
+            {
                 return false;
+            }
 
             string parent_path = new string(stringList[2].Skip(21).TakeWhile(x => x != ',').ToArray());
-
-            if (parent.Path != parent_path)
+            if (!DeserializationTools.CheckParent(parent, parent_path, true))
+            {
                 return false;
+            }
 
             return true;
         }

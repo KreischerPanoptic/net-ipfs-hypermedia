@@ -30,7 +30,7 @@ namespace Ipfs.Hypermedia
         ///   It should be noted, that due to realization of IPFS protocol, the outer hypermedia Path - is null,
         ///   but included hypermedia will have path for retrival.
         /// </remarks>
-        public string Path { get; set; } = null;
+        public string Path { get; set; }
         private string _name;
         /// <summary>
         ///   Human readable name of hypermedia.
@@ -47,13 +47,19 @@ namespace Ipfs.Hypermedia
                 if (value != null)
                 {
                     if (value.Length > 255)
-                        throw new Exception("Hypermedia name can not have more than 255 symbols");
+                    {
+                        throw new ArgumentException("Hypermedia name can not have more than 255 symbols");
+                    }
                     if (value.Length <= 0)
-                        throw new Exception("Hypermedia name can not be empty");
+                    {
+                        throw new ArgumentException("Hypermedia name can not be empty");
+                    }
                     _name = value;
                 }
                 else
-                    throw new Exception("Hypermedia name can not be null");
+                {
+                    throw new ArgumentException("Hypermedia name can not be null");
+                }
             }
         }
         /// <summary>
@@ -69,7 +75,7 @@ namespace Ipfs.Hypermedia
         /// <remarks>
         ///   It can be any information. Or description. As well as null.
         /// </remarks>
-        public string Comment { get; set; } = null;
+        public string Comment { get; set; }
         /// <summary>
         ///   Encoding of metadata properties.
         /// </summary>
@@ -142,7 +148,7 @@ namespace Ipfs.Hypermedia
         ///   Unnesessary property.
         ///   Different clients can implement different uses of PubSub Topic property.
         /// </remarks>
-        public string Topic { get; private set; } = null;
+        public string Topic { get; private set; }
         /// <summary>
         ///   Default message of client after subscribing to topic.
         /// </summary>
@@ -163,7 +169,7 @@ namespace Ipfs.Hypermedia
         /// <summary>
         ///   Hash of hypermedia for verification purposes.
         /// </summary>
-        public string Hash { get; private set; } = null;
+        public string Hash { get; private set; }
         private IEntity _parent;
         /// <summary>
         ///   Link to parent entity in which this Hypermedia resides.
@@ -178,7 +184,9 @@ namespace Ipfs.Hypermedia
             set
             {
                 if (!(value is Hypermedia || value is null))
+                {
                     throw new ArgumentException("Only hypermedia and can be parent for hypermedia! Or null.");
+                }
                 _parent = value;
             }
         }
@@ -190,16 +198,31 @@ namespace Ipfs.Hypermedia
         ///   Current default - hypermedia/0.1.0
         /// </remarks>
         public string Version { get; private set; } = "hypermedia/0.1.0";
+        private const string _startOfEntityListDeclaration = "(list<entity_interface>[";
+        private const string _endOfEntityListDeclaration = "},";
         /// <summary>
-        ///   Default constructor witn one default parameter. Initializes <see cref="Parent">Parent</see> with passed <paramref name="parent"/>.
+        ///   Default parameterless constructor. Initializes <see cref="Parent">Parent</see> with null.
+        /// </summary>
+        public Hypermedia()
+        {
+            Parent = null;
+        }
+        /// <summary>
+        ///   Default constructor witn one parameter. Initializes <see cref="Parent">Parent</see> with passed <paramref name="parent"/>.
         /// </summary>
         /// <param name="parent">
         ///   Parent hypermedia for this hypermedia.
-        ///   By default equals null;
         /// </param>
-        public Hypermedia(Hypermedia parent = null)
+        public Hypermedia(Hypermedia parent)
         {
             Parent = parent;
+        }
+        /// <summary>
+        ///   Creates and set hash for hypermedia instance.
+        /// </summary>
+        public void SetHash()
+        {
+            SetHash(null);
         }
         /// <summary>
         ///   Creates and set hash for hypermedia instance.
@@ -211,7 +234,7 @@ namespace Ipfs.Hypermedia
         ///   You should never manually set content parameter of SetHash for Hypermedia.
         /// </remarks>
         /// <exception cref="Exception"/>
-        public void SetHash(byte[] content = null)
+        public void SetHash(byte[] content)
         {
             if (Hash is null)
             {
@@ -221,7 +244,6 @@ namespace Ipfs.Hypermedia
                 foreach (var e in Entities)
                 {
                     entitesHashes.Add(e.GetHash());
-
                 }
                 List<byte> buffer = new List<byte>();
                 buffer.AddRange(Encoding.GetBytes(Name));
@@ -241,8 +263,15 @@ namespace Ipfs.Hypermedia
             }
             else
             {
-                throw new Exception("Hash can only be set once");
+                throw new AccessViolationException("Hash can only be set once");
             }
+        }
+        /// <summary>
+        ///   Creates and set hash for hypermedia instance, and returns it as string.
+        /// </summary>
+        public string GetHash()
+        {
+            return GetHash(null);
         }
         /// <summary>
         ///   Creates and set hash for hypermedia instance, and returns it as string.
@@ -253,10 +282,12 @@ namespace Ipfs.Hypermedia
         /// <remarks>
         ///   You should never manually set content parameter of GetHash for Hypermedia.
         /// </remarks>
-        public string GetHash(byte[] content = null)
+        public string GetHash(byte[] content)
         {
             if (Hash is null)
+            {
                 SetHash();
+            }
             return Hash;
         }
         /// <summary>
@@ -265,10 +296,26 @@ namespace Ipfs.Hypermedia
         public void SetTopic()
         {
             if (Hash is null)
-                throw new Exception("Hash must be created for hypermedia before topic address creation");
+            {
+                throw new FieldAccessException("Hash must be created for hypermedia before topic address creation");
+            }
             if (!(Topic is null))
-                throw new Exception("Topic can only be set once");
+            {
+                throw new AccessViolationException("Topic can only be set once");
+            }
             Topic = $"{Path}_{Hash}";
+        }
+        /// <summary>
+        ///   Serializes given hypermedia to stream asynchronously.
+        /// </summary>
+        /// <param name="outputStream">
+        ///   The output stream in which hypermedia would be serialized.
+        /// </param>
+        /// <param name="instance">
+        ///   The in
+        public static async Task SerializeAsync(Stream outputStream, Hypermedia instance)
+        {
+            await SerializeAsync(outputStream, instance, Formatting.None).ConfigureAwait(false);
         }
         /// <summary>
         ///   Serializes given hypermedia to stream asynchronously.
@@ -285,13 +332,26 @@ namespace Ipfs.Hypermedia
         /// <returns>
         ///   Task or void. 
         /// </returns>
-        public static async Task SerializeAsync(Stream outputStream, Hypermedia instance, Formatting formatting = Formatting.None)
+        public static async Task SerializeAsync(Stream outputStream, Hypermedia instance, Formatting formatting)
         {
             await Task.Run(async () =>
             {
                 var buffer = Encoding.UTF8.GetBytes(SerializeToString(instance, formatting, 0));
-                await outputStream.WriteAsync(buffer, 0, buffer.Length);
-            });
+                await outputStream.WriteAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
+            }).ConfigureAwait(false);
+        }
+        /// <summary>
+        ///   Serializes given hypermedia to stream synchronously.
+        /// </summary>
+        /// <param name="outputStream">
+        ///   The output stream in which hypermedia would be serialized.
+        /// </param>
+        /// <param name="instance">
+        ///   The instance of hypermedia that would be serialized.
+        /// </param>
+        public static void Serialize(Stream outputStream, Hypermedia instance)
+        {
+            SerializeAsync(outputStream, instance, Formatting.None).ConfigureAwait(false).GetAwaiter().GetResult();
         }
         /// <summary>
         ///   Serializes given hypermedia to stream synchronously.
@@ -308,7 +368,7 @@ namespace Ipfs.Hypermedia
         /// <returns>
         ///   void. 
         /// </returns>
-        public static void Serialize(Stream outputStream, Hypermedia instance, Formatting formatting = Formatting.None)
+        public static void Serialize(Stream outputStream, Hypermedia instance, Formatting formatting)
         {
             SerializeAsync(outputStream, instance, formatting).ConfigureAwait(false).GetAwaiter().GetResult();
         }
@@ -331,12 +391,16 @@ namespace Ipfs.Hypermedia
                 {
                     int b = inputStream.ReadByte();
                     if (b != -1)
+                    {
                         buffer.Add((byte)b);
+                    }
                     else
+                    {
                         isEndOfStream = true;
+                    }
                 }
                 return Hypermedia.DeserializeFromString(System.Text.Encoding.UTF8.GetString(buffer.ToArray()));
-            });
+            }).ConfigureAwait(false);
         }
         /// <summary>
         ///   Deserializes given stream to hypermedia synchronously.
@@ -357,73 +421,92 @@ namespace Ipfs.Hypermedia
         /// <param name="hypermedia">
         ///   Hypermedia to be serialized.
         /// </param>
+        public static string SerializeToString(Hypermedia hypermedia)
+        {
+            return SerializeToString(hypermedia, Formatting.None, 0);
+        }
+        /// <summary>
+        ///   Serializes passed hypermedia to string using passed encoding.
+        /// </summary>
+        /// <param name="hypermedia">
+        ///   Hypermedia to be serialized.
+        /// </param>
         /// <param name="formatting">
         ///   <see cref="Formatting">Formatting</see> options for serialization.
         /// </param>
         /// <param name="tabulationCount">
         ///   Internal argument for count of tabulations.
         /// </param>
-        public static string SerializeToString(Hypermedia hypermedia, Formatting formatting = Formatting.None, uint tabulationCount = 0)
+        public static string SerializeToString(Hypermedia hypermedia, Formatting formatting, uint tabulationsCount)
         {
             string outerTabulationBuilder = string.Empty;
             string innerTabulationBuilder = string.Empty;
             if (formatting == Formatting.Indented)
             {
-                innerTabulationBuilder += '\t';
-                for (int i = 0; i < tabulationCount; ++i)
-                {
-                    outerTabulationBuilder += '\t';
-                    innerTabulationBuilder += '\t';
-                }
+                SerializationTools.InitTabulations(out outerTabulationBuilder, out innerTabulationBuilder, tabulationsCount);
             }
             StringBuilder builder = new StringBuilder();
-            builder.AppendLine("[");
-            builder.AppendLine($"{innerTabulationBuilder}(string:path)={hypermedia.Path},");
-            builder.AppendLine($"{innerTabulationBuilder}(string:name)={EncodingTools.EncodeString(hypermedia.Name, hypermedia.Encoding is null ? Encoding.UTF8 : hypermedia.Encoding)},");
+            SerializationTools.InitStartBaseHypermediaSerializationStrings(ref builder, hypermedia, outerTabulationBuilder, innerTabulationBuilder);
             builder.AppendLine($"{innerTabulationBuilder}(string:comment)={(hypermedia.Comment is null ? "null" : EncodingTools.EncodeString(hypermedia.Comment, hypermedia.Encoding is null ? Encoding.UTF8 : hypermedia.Encoding))},");
             builder.AppendLine($"{innerTabulationBuilder}(encoding:encoding)={(hypermedia.Encoding is null ? "utf-8" : hypermedia.Encoding.WebName)},");
             builder.AppendLine($"{innerTabulationBuilder}(date_time:created_date_time)={((DateTimeOffset)hypermedia.CreatedDateTime).ToUnixTimeSeconds()},");
             builder.AppendLine($"{innerTabulationBuilder}(string:created_by)={hypermedia.CreatedBy},");
             builder.AppendLine($"{innerTabulationBuilder}(string:creator_peer)={(hypermedia.CreatorPeer is null ? "null" : hypermedia.CreatorPeer)},");
             if (hypermedia.Entities.Count <= 0)
+            {
                 throw new Exception("Hypermedia entities list can not be empty");
-            builder.AppendLine($"{innerTabulationBuilder}(list<entity_interface>[{hypermedia.Entities.Count}]:entities)=" + "{" + EntityListSerializer(hypermedia.Entities, hypermedia.Encoding is null ? Encoding.UTF8 : hypermedia.Encoding, formatting, tabulationCount + 1) + "},");
+            }
+            builder.AppendLine($"{innerTabulationBuilder}{_startOfEntityListDeclaration}{hypermedia.Entities.Count}]:entities)=" + "{" + 
+                (formatting == Formatting.Indented
+                ? EntityListSerializer(
+                    hypermedia.Entities, hypermedia.Encoding is null
+                    ? Encoding.UTF8
+                    : hypermedia.Encoding, formatting, tabulationsCount + 1
+                    ) 
+                : EntityListSerializer(
+                    hypermedia.Entities, hypermedia.Encoding is null
+                    ? Encoding.UTF8
+                    : hypermedia.Encoding
+                    )
+                ) + $"{_endOfEntityListDeclaration}");
             builder.AppendLine($"{innerTabulationBuilder}(boolean:is_directory_wrapped)={(hypermedia.IsDirectoryWrapped ? "true" : "false")},");
             builder.AppendLine($"{innerTabulationBuilder}(boolean:is_raw_ipfs)={(hypermedia.IsRawIPFS ? "true" : "false")},");
             builder.AppendLine($"{innerTabulationBuilder}(string:topic)={(hypermedia.Topic is null ? "null" : hypermedia.Topic)},");
             builder.AppendLine($"{innerTabulationBuilder}(string:default_subscription_message)={(hypermedia.DefaultSubscriptionMessage is null ? "subscribed" : hypermedia.DefaultSubscriptionMessage)},");
             builder.AppendLine($"{innerTabulationBuilder}(string:default_seeding_message)={(hypermedia.DefaultSeedingMessage is null ? "seeding" : hypermedia.DefaultSeedingMessage)},");
             builder.AppendLine($"{innerTabulationBuilder}(string:version)={hypermedia.Version},");
-            builder.AppendLine($"{innerTabulationBuilder}(uint64:size)={hypermedia.Size},");
-            builder.AppendLine($"{innerTabulationBuilder}(string:parent_path)={(hypermedia.Parent is null ? "null" : hypermedia.Parent.Path)},");
-            builder.AppendLine($"{innerTabulationBuilder}(string:hash)={hypermedia.Hash};");
-            builder.Append($"{outerTabulationBuilder}]");
+            SerializationTools.InitEndBaseSerializationStrings(ref builder, hypermedia, outerTabulationBuilder, innerTabulationBuilder);
             return builder.ToString();
         }
         #region Serialization Algorithms
-        private static string EntityListSerializer(List<IEntity> entities, Encoding encoding, Formatting formatting = Formatting.None, uint tabulationCount = 0)
+        private static string EntityListSerializer(List<IEntity> entities, Encoding encoding)
+        {
+            return EntityListSerializer(entities, encoding, Formatting.None, 0);
+        }
+        private static string EntityListSerializer(List<IEntity> entities, Encoding encoding, Formatting formatting, uint tabulationsCount)
         {
             string outerTabulationBuilder = string.Empty;
             string innerTabulationBuilder = string.Empty;
             if (formatting == Formatting.Indented)
             {
-                innerTabulationBuilder += '\t';
-                for (int i = 0; i < tabulationCount; ++i)
-                {
-                    innerTabulationBuilder += '\t';
-                    outerTabulationBuilder += '\t';
-                }
+                SerializationTools.InitTabulations(out outerTabulationBuilder, out innerTabulationBuilder, tabulationsCount);
             }
             StringBuilder builder = new StringBuilder();
             builder.AppendLine("[");
             for (int i = 0; i < entities.Count; ++i)
             {
                 if (entities[i] is File)
-                    builder.AppendLine($"{innerTabulationBuilder}(file:{i})={File.SerializeToString(entities[i] as File, encoding, formatting, tabulationCount + 1)}{(i == entities.Count - 1 ? ";" : ",")}");
+                {
+                    builder.AppendLine($"{innerTabulationBuilder}(file:{i})={(formatting == Formatting.Indented ? File.SerializeToString(entities[i] as File, encoding, formatting, tabulationsCount + 1) : File.SerializeToString(entities[i] as File, encoding))}{(i == entities.Count - 1 ? ";" : ",")}");
+                }
                 else if (entities[i] is Directory)
-                    builder.AppendLine($"{innerTabulationBuilder}(directory:{i})={Directory.SerializeToString(entities[i] as Directory, encoding, formatting, tabulationCount + 1)}{(i == entities.Count - 1 ? ";" : ",")}");
-                else if(entities[i] is Hypermedia)
-                    builder.AppendLine($"{innerTabulationBuilder}(hypermedia:{i})={Hypermedia.SerializeToString(entities[i] as Hypermedia, formatting, tabulationCount + 1)}{(i == entities.Count - 1 ? ";" : ",")}");
+                {
+                    builder.AppendLine($"{innerTabulationBuilder}(directory:{i})={(formatting == Formatting.Indented ? Directory.SerializeToString(entities[i] as Directory, encoding, formatting, tabulationsCount + 1) : Directory.SerializeToString(entities[i] as Directory, encoding))}{(i == entities.Count - 1 ? ";" : ",")}");
+                }
+                else if (entities[i] is Hypermedia)
+                {
+                    builder.AppendLine($"{innerTabulationBuilder}(hypermedia:{i})={(formatting == Formatting.Indented ? SerializeToString(entities[i] as Hypermedia, formatting, tabulationsCount + 1) : SerializeToString(entities[i] as Hypermedia))}{(i == entities.Count - 1 ? ";" : ",")}");
+                }
             }
             builder.Append($"{outerTabulationBuilder}]");
             return builder.ToString();
@@ -446,10 +529,10 @@ namespace Ipfs.Hypermedia
             string comment = null;
             Encoding encoding = null;
             long cDateTime = 0;
-            DateTime createdDateTime = DateTime.UtcNow;
+            DateTime createdDateTime;
             string createdBy = null;
             string creatorPeer = null;
-            List<IEntity> entities = new List<IEntity>();
+            List<IEntity> entities;
             bool isDirectoryWrapped = false;
             bool isRawIPFS = false;
             string topic = null;
@@ -462,30 +545,14 @@ namespace Ipfs.Hypermedia
 
             input = input.Replace("\t", "");
 
-            if (!input.StartsWith("["))
-                throw new ArgumentException("Bad formatting in serialized string detected. Expected [ in start.");
-            if (!input.EndsWith("]"))
-                throw new ArgumentException("Bad formatting in serialized string detected. Expected ] in end.");
+            DeserializationTools.CheckStringFormat(input, false);
 
-            input = input.TrimStart('[').TrimEnd(']').TrimStart('\r').TrimEnd('\n').TrimStart('\n');
+            int count;
+            string entitiesList;
+            List<string> stringList;
+            DeserializationTools.SplitStringForHypermedia(input, _startOfEntityListDeclaration, _endOfEntityListDeclaration, 24, out count, out entitiesList, out stringList, false);
 
-            int count = EntitiesListCount(input);
-            if (count <= 0)
-                throw new Exception("Possible serialization error encountered. Hypermedia entities list can not be empty");
-            string entitiesList = ExtractSerializedEntitiesList(input);
-            input = RemoveEntitiesList(input);
-            var stringList = input.Split('\n').ToList();
-
-            path = new string(stringList[0].Skip(14).TakeWhile(x => x != ',').ToArray());
-            try
-            {
-                encoding = Encoding.GetEncoding(new string(stringList[3].Skip(20).TakeWhile(x => x != ',').ToArray()));
-            }
-            catch
-            {
-                encoding = Encoding.GetEncoding("utf-8");
-            }    
-            name = EncodingTools.DecodeString(new string(stringList[1].Skip(14).TakeWhile(x => x != ',').ToArray()), encoding);
+            DeserializationTools.ParseStartBaseHypermediaSerializationString(stringList, out path, out encoding, out name);
             comment = EncodingTools.DecodeString(new string(stringList[2].Skip(17).TakeWhile(x => x != ',').ToArray()), encoding);
             cDateTime = long.Parse(new string(stringList[4].Skip(30).TakeWhile(x => x != ',').ToArray()));
             createdDateTime = DateTimeOffset.FromUnixTimeSeconds(cDateTime).UtcDateTime;
@@ -497,13 +564,12 @@ namespace Ipfs.Hypermedia
             defaultSubscriptionMessage = new string(stringList[10].Skip(38).TakeWhile(x => x != ',').ToArray());
             defaultSeedingMessage = new string(stringList[11].Skip(33).TakeWhile(x => x != ',').ToArray());
             version = new string(stringList[12].Skip(17).TakeWhile(x => x != ',').ToArray());
-            size = ulong.Parse(new string(stringList[13].Skip(14).TakeWhile(x => x != ',').ToArray()));
-            parent_path = new string(stringList[14].Skip(21).TakeWhile(x => x != ',').ToArray());
-            hash = new string(stringList[15].Skip(14).TakeWhile(x => x != ';').ToArray());
+            DeserializationTools.ParseEndBaseSerializationString(stringList, 13, out size, out parent_path, out hash);
 
             if(parent != null)
-                if (parent.Path != parent_path)
-                    throw new ArgumentException("Deserialized parent path is not the expected one");
+            {
+                DeserializationTools.CheckParent(parent, parent_path, false);
+            }
 
             Hypermedia hypermedia = new Hypermedia(parent)
             {
@@ -534,22 +600,23 @@ namespace Ipfs.Hypermedia
         {
             List<IEntity> entities = new List<IEntity>();
 
-            if (!input.StartsWith("["))
-                throw new ArgumentException("Bad formatting in serialized string detected. Expected [ in start.");
-            if (!input.EndsWith("]"))
-                throw new ArgumentException("Bad formatting in serialized string detected. Expected ] in end.");
+            DeserializationTools.CheckStringFormat(input, false);
 
             input = input.TrimStart('[').TrimEnd(']').TrimStart('\r').TrimEnd('\n').TrimStart('\n').TrimEnd('\r');
             var stringList = SplitEntitiesList(input, parent);
             if (stringList.Count != count)
-                throw new Exception("Parsed string list does not match expected length");
+            {
+                throw new ArgumentException("Parsed string list does not match expected length", "count");
+            }
 
             for (int i = 0; i < count; ++i)
             {
                 string type = new string(stringList[i].Skip(1).TakeWhile(s => s != ':').ToArray());
                 int index = int.Parse(new string(stringList[i].Skip(type.Length + 2).TakeWhile(s => s != ')').ToArray()));
                 if (index != i)
-                    throw new Exception("Possible serialization error encountered. Unexpected sequence");
+                {
+                    throw new ArgumentException("Possible serialization error encountered. Unexpected sequence", "input");
+                }
                 switch (type)
                 {
                     case "file":
@@ -562,12 +629,14 @@ namespace Ipfs.Hypermedia
                         entities.Add(Hypermedia.DeserializeFromString(new string(stringList[i].SkipWhile(s => s != '[').ToArray()), parent));
                         break;
                     default:
-                        throw new Exception("Possible serialization error encountered. Unexpected type");
+                        throw new ArgumentException("Possible serialization error encountered. Unexpected type", "input");
                 }
             }
 
             if (count != entities.Count)
-                throw new Exception("Serialized and deserialized collection length does not match");
+            {
+                throw new ArgumentException("Serialized and deserialized collection length does not match", "count");
+            }
 
             return entities;
         }
@@ -594,9 +663,13 @@ namespace Ipfs.Hypermedia
                             isStringValid = File.IsSerializedStringValid(toReturn, parent);
                             string tmpEntity = new string(tmpInput.TakeWhile(s => s != '[').ToArray()) + toReturn;
                             if (tmpEntity.Length == tmpInput.Length)
-                                throw new Exception("Possible serialization error encountered. Unexpected input.");
+                            {
+                                throw new ArgumentException("Possible serialization error encountered. Unexpected input.", "input");
+                            }
                             if (!isStringValid)
+                            {
                                 toReturn += new string(tmpInput.Skip(new string(tmpInput.TakeWhile(s => s != '[').ToArray()).Length + toReturn.Length).Take(1).ToArray());
+                            }
                         }
                         while (!isStringValid);
                         break;
@@ -607,9 +680,17 @@ namespace Ipfs.Hypermedia
                             isStringValid = Directory.IsSerializedStringValid(toReturn, parent);
                             string tmpEntity = new string(tmpInput.TakeWhile(s => s != '[').ToArray()) + toReturn;
                             if (tmpEntity.Length == tmpInput.Length)
-                                throw new Exception("Possible serialization error encountered. Unexpected input.");
+                            {
+                                throw new ArgumentException("Possible serialization error encountered. Unexpected input.", "input");
+                            }
                             if (!isStringValid)
+                            {
                                 toReturn += new string(tmpInput.Skip(new string(tmpInput.TakeWhile(s => s != '[').ToArray()).Length + toReturn.Length).Take(1).ToArray());
+                                if(toReturn.Length > 1150)
+                                {
+                                    var i = toReturn.Length;
+                                }
+                            }
                         }
                         while (!isStringValid);
                         break;
@@ -620,68 +701,29 @@ namespace Ipfs.Hypermedia
                             isStringValid = Hypermedia.IsSerializedStringValid(toReturn, parent);
                             string tmpEntity = new string(tmpInput.TakeWhile(s => s != '[').ToArray()) + toReturn;
                             if (tmpEntity.Length == tmpInput.Length)
-                                throw new Exception("Possible serialization error encountered. Unexpected input.");
+                            {
+                                throw new ArgumentException("Possible serialization error encountered. Unexpected input.", "input");
+                            }
                             if (!isStringValid)
+                            {
                                 toReturn += new string(tmpInput.Skip(new string(tmpInput.TakeWhile(s => s != '[').ToArray()).Length + toReturn.Length).Take(1).ToArray());
+                            }
                         }
                         while (!isStringValid);
                         break;
                     default:
-                        throw new Exception("Possible serialization error encountered. Unexpected type");
+                        throw new ArgumentException("Possible serialization error encountered. Unexpected type", "input");
 
                 }
                 string entity = new string(tmpInput.TakeWhile(s => s != '[').ToArray()) + toReturn;
                 entities.Add(entity);
                 tmpInput = tmpInput.Remove(0, entity.Length + 3);
                 if (tmpInput == string.Empty)
+                {
                     isProcessed = true;
+                }
             }
             return entities;
-        }
-
-        private static string RemoveEntitiesList(string input)
-        {
-            string redacted = null;
-
-            int start_block_index = input.IndexOf("(list<entity_interface>[");
-            int end_block_index = input.LastIndexOf("},");
-            redacted = input.Remove(start_block_index - 1,
-                    (end_block_index + 3) - start_block_index - 1);
-            return redacted;
-        }
-
-        private static string ExtractSerializedEntitiesList(string input)
-        {
-            string extracted = null;
-
-            int start_block_index = input.IndexOf("(list<entity_interface>[");
-            int end_block_index = input.LastIndexOf("},");
-
-            int count = int.Parse(new string(input.Skip(start_block_index + 24).TakeWhile(s => s != ']').ToArray()));
-            if (count != 0)
-            {
-                extracted = new string
-                (
-                    input.Skip
-                    (
-                        start_block_index + input.Skip(start_block_index)
-                        .TakeWhile(s => s != '{').ToArray().Length + 1
-                    ).Take(
-                        (end_block_index - 2) - (start_block_index + input.Skip(start_block_index)
-                        .TakeWhile(s => s != '{').Skip(1).ToArray().Length)
-                    ).ToArray()
-                );
-            }
-            return extracted;
-        }
-
-        private static int EntitiesListCount(string input)
-        {
-            int start_block_index = input.IndexOf("(list<entity_interface>[");
-            int end_block_index = input.LastIndexOf("},");
-
-            int count = int.Parse(new string(input.Skip(start_block_index + 24).TakeWhile(s => s != ']').ToArray()));
-            return count;
         }
         #endregion Deserialization Algorithms
         #region Validation
@@ -691,133 +733,196 @@ namespace Ipfs.Hypermedia
             long cDateTime = 0;
             ulong size = 0;
 
-            if (!input.StartsWith("["))
+            if (!DeserializationTools.CheckStringFormat(input, true))
+            {
                 return false;
-            if (!input.EndsWith("]"))
+            }
+
+
+            int count;
+            string entitiesList;
+            List<string> stringList;
+
+            if(!DeserializationTools.SplitStringForHypermedia(input, _startOfEntityListDeclaration, _endOfEntityListDeclaration, 24, out count, out entitiesList, out stringList, true))
+            {
                 return false;
+            }
 
-            string tmp = input.TrimStart('[').TrimEnd(']').TrimStart('\r').TrimEnd('\n').TrimStart('\n');
-
-            int count = -1;
-            if (!TryParseEntitiesListCount(tmp, out count))
-                return false;
-            string entityList = ExtractSerializedEntitiesList(tmp);
-            tmp = RemoveEntitiesList(tmp);
-
-            var stringList = tmp.Split('\n').ToList();
             if (stringList.Count != 16)
-                return false;
-
-            foreach (var s in stringList)
             {
-                if (!s.StartsWith("("))
-                    return false;
+                return false;
             }
 
-            for (int i = 0; i < 15; ++i)
+            if (!DeserializationTools.ValidateStartOfStrings(stringList))
             {
-                if (!stringList[i].EndsWith(",\r"))
-                    return false;
-            }
-            if (!stringList[15].EndsWith(";\r"))
                 return false;
+            }
+
+            if (!DeserializationTools.ValidateEndOfStrings(stringList, 15))
+            {
+                return false;
+            }
 
             //0
             if ((new string(stringList[0].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[0].Skip(8).TakeWhile(x => x != ')').ToArray())) != "path")
+            {
                 return false;
+            }
             //3
             if ((new string(stringList[3].Skip(1).TakeWhile(x => x != ':').ToArray())) != "encoding")
+            {
                 return false;
+            }
 
             if ((new string(stringList[3].Skip(10).TakeWhile(x => x != ')').ToArray())) != "encoding")
+            {
                 return false;
+            }
             //1
             if ((new string(stringList[1].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[1].Skip(8).TakeWhile(x => x != ')').ToArray())) != "name")
+            {
                 return false;
+            }
             //2
             if ((new string(stringList[2].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[2].Skip(8).TakeWhile(x => x != ')').ToArray())) != "comment")
+            {
                 return false;
+            }
             //4
             if ((new string(stringList[4].Skip(1).TakeWhile(x => x != ':').ToArray())) != "date_time")
+            {
                 return false;
+            }
 
             if ((new string(stringList[4].Skip(11).TakeWhile(x => x != ')').ToArray())) != "created_date_time")
+            {
                 return false;
+            }
             //5
             if ((new string(stringList[5].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[5].Skip(8).TakeWhile(x => x != ')').ToArray())) != "created_by")
+            {
                 return false;
+            }
             //6
             if ((new string(stringList[6].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[6].Skip(8).TakeWhile(x => x != ')').ToArray())) != "creator_peer")
+            {
                 return false;
+            }
             //7
             if ((new string(stringList[7].Skip(1).TakeWhile(x => x != ':').ToArray())) != "boolean")
+            {
                 return false;
+            }
 
             if ((new string(stringList[7].Skip(9).TakeWhile(x => x != ')').ToArray())) != "is_directory_wrapped")
+            {
                 return false;
+            }
             //8
             if ((new string(stringList[8].Skip(1).TakeWhile(x => x != ':').ToArray())) != "boolean")
+            {
                 return false;
+            }
 
             if ((new string(stringList[8].Skip(9).TakeWhile(x => x != ')').ToArray())) != "is_raw_ipfs")
+            {
                 return false;
+            }
             //9
             if ((new string(stringList[9].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[9].Skip(8).TakeWhile(x => x != ')').ToArray())) != "topic")
+            {
                 return false;
+            }
             //10
             if ((new string(stringList[10].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[10].Skip(8).TakeWhile(x => x != ')').ToArray())) != "default_subscription_message")
+            {
                 return false;
+            }
             //11
             if ((new string(stringList[11].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[11].Skip(8).TakeWhile(x => x != ')').ToArray())) != "default_seeding_message")
+            {
                 return false;
+            }
             //12
             if ((new string(stringList[12].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[12].Skip(8).TakeWhile(x => x != ')').ToArray())) != "version")
+            {
                 return false;
+            }
             //13
             if ((new string(stringList[13].Skip(1).TakeWhile(x => x != ':').ToArray())) != "uint64")
+            {
                 return false;
+            }
 
             if ((new string(stringList[13].Skip(8).TakeWhile(x => x != ')').ToArray())) != "size")
+            {
                 return false;
+            }
             //14
             if ((new string(stringList[14].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[14].Skip(8).TakeWhile(x => x != ')').ToArray())) != "parent_path")
+            {
                 return false;
+            }
             //15
             if ((new string(stringList[15].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[15].Skip(8).TakeWhile(x => x != ')').ToArray())) != "hash")
+            {
                 return false;
+            }
             //TryParse
             try
             {
@@ -829,29 +934,45 @@ namespace Ipfs.Hypermedia
             }
 
             if (!long.TryParse(new string(stringList[4].Skip(30).TakeWhile(x => x != ',').ToArray()), out cDateTime))
+            {
                 return false;
+            }
 
             if (!(new string(stringList[7].Skip(31).TakeWhile(x => x != ',').ToArray()) == "true" || new string(stringList[7].Skip(31).TakeWhile(x => x != ',').ToArray()) == "false"))
+            {
                 return false;
+            }
 
             if (!(new string(stringList[8].Skip(22).TakeWhile(x => x != ',').ToArray()) == "true" || new string(stringList[8].Skip(22).TakeWhile(x => x != ',').ToArray()) == "false"))
+            {
                 return false;
+            }
 
             if (!ulong.TryParse(new string(stringList[13].Skip(14).TakeWhile(x => x != ',').ToArray()), out size))
+            {
                 return false;
+            }
 
             string ver = new string(stringList[12].Skip(17).TakeWhile(x => x != ',').ToArray());
             if (!ver.Contains("/"))
+            {
                 return false;
+            }
             if (ver.Split('/').Length != 2)
+            {
                 return false;
+            }
 
             string path = new string(stringList[0].Skip(14).TakeWhile(x => x != ',').ToArray());
 
             string parent_path = new string(stringList[14].Skip(21).TakeWhile(x => x != ',').ToArray());
             if (parent != null)
-                if (parent.Path != parent_path)
+            {
+                if (!DeserializationTools.CheckParent(parent, parent_path, true))
+                {
                     return false;
+                }
+            }
 
             Hypermedia hypermedia = new Hypermedia(parent)
             {
@@ -860,10 +981,14 @@ namespace Ipfs.Hypermedia
             };
             bool isEntitiesValid = true;
             if (count > 0)
-                isEntitiesValid = TryEntitiesListDeserializer(entityList, hypermedia, count);
+            {
+                isEntitiesValid = TryEntitiesListDeserializer(entitiesList, hypermedia, count);
+            }
 
             if (!isEntitiesValid)
+            {
                 return false;
+            }
 
             return true;
         }
@@ -872,18 +997,22 @@ namespace Ipfs.Hypermedia
         {
             List<IEntity> entities = new List<IEntity>();
 
-            if (!input.StartsWith("["))
+            if (!DeserializationTools.CheckStringFormat(input, true))
+            {
                 return false;
-            if (!input.EndsWith("]"))
-                return false;
+            }
 
             input = input.TrimStart('[').TrimEnd(']').TrimStart('\r').TrimEnd('\n').TrimStart('\n').TrimEnd('\r');
             List<string> stringList = new List<string>();
             bool isEntitiesValid = TrySplitEntitiesList(input, parent, out stringList);
             if (!isEntitiesValid)
+            {
                 return false;
+            }
             if (stringList.Count != count)
+            {
                 return false;
+            }
 
             bool result = true;
             for (int i = 0; i < count; ++i)
@@ -891,20 +1020,28 @@ namespace Ipfs.Hypermedia
                 string type = new string(stringList[i].Skip(1).TakeWhile(s => s != ':').ToArray());
                 int index = int.Parse(new string(stringList[i].Skip(type.Length + 2).TakeWhile(s => s != ')').ToArray()));
                 if (index != i)
+                {
                     return false;
+                }
                 switch (type)
                 {
                     case "file":
                         if (!File.IsSerializedStringValid(new string(stringList[i].SkipWhile(s => s != '[').ToArray()), parent))
+                        {
                             result = false;
+                        }
                         break;
                     case "directory":
                         if (!Directory.IsSerializedStringValid(new string(stringList[i].SkipWhile(s => s != '[').ToArray()), parent))
+                        {
                             result = false;
+                        }
                         break;
                     case "hypermedia":
                         if (!Hypermedia.IsSerializedStringValid(new string(stringList[i].SkipWhile(s => s != '[').ToArray()), parent))
+                        {
                             result = false;
+                        }
                         break;
                     default:
                         return false;
@@ -935,9 +1072,13 @@ namespace Ipfs.Hypermedia
                         {
                             isStringValid = File.IsSerializedStringValid(toReturn, parent);
                             if ((new string(tmpInput.TakeWhile(s => s != '[').ToArray()) + toReturn).Length == tmpInput.Length)
+                            {
                                 return false;
+                            }
                             if (!isStringValid)
+                            {
                                 toReturn += new string(tmpInput.Skip(new string(tmpInput.TakeWhile(s => s != '[').ToArray()).Length + toReturn.Length).Take(1).ToArray());
+                            }
                         }
                         while (!isStringValid);
                         break;
@@ -947,9 +1088,13 @@ namespace Ipfs.Hypermedia
                         {
                             isStringValid = Directory.IsSerializedStringValid(toReturn, parent);
                             if ((new string(tmpInput.TakeWhile(s => s != '[').ToArray()) + toReturn).Length == tmpInput.Length)
+                            {
                                 return false;
+                            }
                             if (!isStringValid)
+                            {
                                 toReturn += new string(tmpInput.Skip(new string(tmpInput.TakeWhile(s => s != '[').ToArray()).Length + toReturn.Length).Take(1).ToArray());
+                            }
                         }
                         while (!isStringValid);
                         break;
@@ -959,9 +1104,13 @@ namespace Ipfs.Hypermedia
                         {
                             isStringValid = Hypermedia.IsSerializedStringValid(toReturn, parent);
                             if ((new string(tmpInput.TakeWhile(s => s != '[').ToArray()) + toReturn).Length == tmpInput.Length)
+                            {
                                 return false;
+                            }
                             if (!isStringValid)
+                            {
                                 toReturn += new string(tmpInput.Skip(new string(tmpInput.TakeWhile(s => s != '[').ToArray()).Length + toReturn.Length).Take(1).ToArray());
+                            }
                         }
                         while (!isStringValid);
                         break;
@@ -974,25 +1123,14 @@ namespace Ipfs.Hypermedia
                 int il = tmpInput.Length;
                 tmpInput = tmpInput.Remove(0, entity.Length + 3);
                 if (tmpInput == string.Empty)
+                {
                     isProcessed = true;
+                }
             }
             if (entities.Count <= 0)
+            {
                 return false;
-            return true;
-        }
-
-        private static bool TryParseEntitiesListCount(string input, out int count)
-        {
-            count = -1;
-            if (!input.Contains("(list<entity_interface>["))
-                return false;
-            int start_block_index = input.IndexOf("(list<entity_interface>[");
-            if (!input.Contains("},"))
-                return false;
-            int end_block_index = input.IndexOf("},");
-
-            if (!int.TryParse(new string(input.Skip(start_block_index + 24).TakeWhile(s => s != ']').ToArray()), out count))
-                return false;
+            }
             return true;
         }
         #endregion Validation

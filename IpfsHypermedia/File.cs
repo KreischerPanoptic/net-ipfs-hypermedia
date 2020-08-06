@@ -38,11 +38,15 @@ namespace Ipfs.Hypermedia
                 if (value != null)
                 {
                     if (value.Length > 255)
-                        throw new Exception("File name can not have more than 255 symbols");
+                    {
+                        throw new ArgumentException("File name can not have more than 255 symbols");
+                    }
                     _name = value;
                 }
                 else
-                    throw new Exception("File name can not be null. If file do not have name - use empty string");
+                {
+                    throw new ArgumentException("File name can not be null. If file do not have name - use empty string");
+                }
             }
         }
         private string _extension;
@@ -60,11 +64,15 @@ namespace Ipfs.Hypermedia
                 if (value != null)
                 {
                     if (value.Length > 255)
-                        throw new Exception("File extension can not have more than 255 symbols");
+                    {
+                        throw new ArgumentException("File extension can not have more than 255 symbols");
+                    }
                     _extension = value;
                 }
                 else
-                    throw new Exception("File extension can not be null. If file do not have extension - use empty string");
+                {
+                    throw new ArgumentException("File extension can not be null. If file do not have extension - use empty string");
+                }
             }
         }
         private FileAttributes? _attributes;
@@ -81,15 +89,24 @@ namespace Ipfs.Hypermedia
             set
             {
                 if (!value.HasValue)
+                {
                     _attributes = value;
-                else if (value.Value == FileAttributes.Normal)
-                    _attributes = value;
-                else if (value.Value == FileAttributes.Hidden || value.Value == FileAttributes.ReadOnly)
-                    _attributes = value;
-                else if (value.Value == (FileAttributes.Hidden | FileAttributes.ReadOnly))
-                    _attributes = value;
+                }
                 else
-                    throw new Exception("File attributes can be only Normal, Hidden, Read-Only and Hidden|Read-Only");
+                {
+                    switch(value.Value)
+                    {
+                        case FileAttributes.Normal:
+                        case FileAttributes.Hidden:
+                        case FileAttributes.ReadOnly:
+                        case FileAttributes.Hidden | FileAttributes.ReadOnly:
+                            _attributes = value;
+                            break;
+                        default:
+                            throw new ArgumentException("File attributes can be only Normal, Hidden, Read-Only and Hidden|Read-Only");
+
+                    }
+                }
             } 
         }
         private DateTime? _lastModifiedDateTime;
@@ -106,9 +123,13 @@ namespace Ipfs.Hypermedia
             set
             {
                 if (!value.HasValue)
+                {
                     _lastModifiedDateTime = value;
+                }
                 else
+                {
                     _lastModifiedDateTime = value.Value.ToUniversalTime();
+                }
             } 
         }
         /// <summary>
@@ -133,7 +154,7 @@ namespace Ipfs.Hypermedia
         /// <summary>
         ///   Hash of file for verification purposes.
         /// </summary>
-        public string Hash { get; private set; } = null;
+        public string Hash { get; private set; }
         private IEntity _parent;
         /// <summary>
         ///   Link to parent entity in which this file resides.
@@ -151,19 +172,31 @@ namespace Ipfs.Hypermedia
                 if (value != null)
                 {
                     if (value is File)
+                    {
                         throw new ArgumentException("File can't be parent of the file!");
+                    }
                     _parent = value;
                 }
-                else 
+                else
+                {
                     throw new ArgumentException("Parent must be set for file!");
+                }
             }
+        }
+        private const string _startOfBlockListDeclaration = "(list<block>[";
+        private const string _endOfBlockListDeclaration = "},";
+        /// <summary>
+        ///   Creates and set hash for file instance.
+        /// </summary>
+        public void SetHash()
+        {
+            SetHash(null);
         }
         /// <summary>
         ///   Creates and set hash for file instance.
         /// </summary>
         /// <param name="content">
         ///   Raw bytes of file if needed in byte array.
-        ///   Default null.
         ///   Only needed for <see cref="File.IsSingleBlock">Single Blocked files</see>.
         /// </param>
         /// <remarks>
@@ -172,7 +205,7 @@ namespace Ipfs.Hypermedia
         ///   So, the best approach is to upload a file to IPFS, retrieve it and set content manually.
         /// </remarks>
         /// <exception cref="Exception"/>
-        public void SetHash(byte[] content = null)
+        public void SetHash(byte[] content)
         {
             if (Hash is null)
             {
@@ -181,7 +214,7 @@ namespace Ipfs.Hypermedia
                 {
                     if (content == null)
                     {
-                        throw new Exception("This file is single block and must be provided with byte array of content");
+                        throw new ArgumentException("This file is single block and must be provided with byte array of content", "content");
                     }
                     else
                     {
@@ -228,15 +261,21 @@ namespace Ipfs.Hypermedia
             }
             else
             {
-                throw new Exception("Hash can only be set once");
+                throw new AccessViolationException("Hash can only be set once");
             }
+        }
+        /// <summary>
+        ///   Creates and set hash for file instance, and returns it as string.
+        /// </summary>
+        public string GetHash()
+        {
+            return GetHash(null);
         }
         /// <summary>
         ///   Creates and set hash for file instance, and returns it as string.
         /// </summary>
         /// <param name="content">
         ///   Raw bytes of file if needed in byte array.
-        ///   Default null.
         ///   Only needed for <see cref="File.IsSingleBlock">Single Blocked files</see>.
         /// </param>
         /// <remarks>
@@ -244,11 +283,27 @@ namespace Ipfs.Hypermedia
         ///   but it impossible, due to nature of this library and purposes.
         ///   So, the best approach is to upload a file to IPFS, retrieve it and set content manually.
         /// </remarks>
-        public string GetHash(byte[] content = null)
+        public string GetHash(byte[] content)
         {
             if (Hash is null)
+            {
                 SetHash(content);
+            }
             return Hash;
+        }
+        /// <summary>
+        ///   Serializes passed file to string using passed encoding.
+        /// </summary>
+        /// <param name="file">
+        ///   File to be serialized.
+        /// </param>
+        /// <param name="encoding">
+        ///   Encoding used for serialization of file name.
+        ///   Usually passed from parent <see cref="Hypermedia">hypermedia</see> where file resides.
+        /// </param>
+        public static string SerializeToString(File file, Encoding encoding)
+        {
+            return SerializeToString(file, encoding, Formatting.None, 0);
         }
         /// <summary>
         ///   Serializes passed file to string using passed encoding.
@@ -266,39 +321,31 @@ namespace Ipfs.Hypermedia
         /// <param name="tabulationCount">
         ///   Internal argument for count of tabulations.
         /// </param>
-        public static string SerializeToString(File file, Encoding encoding, Formatting formatting = Formatting.None, uint tabulationCount = 0)
+        public static string SerializeToString(File file, Encoding encoding, Formatting formatting, uint tabulationsCount)
         {
             string outerTabulationBuilder = string.Empty;
             string innerTabulationBuilder = string.Empty;
             if (formatting == Formatting.Indented)
             {
-                innerTabulationBuilder += '\t';
-                for (int i = 0; i < tabulationCount; ++i)
-                {
-                    outerTabulationBuilder += '\t';
-                    innerTabulationBuilder += '\t';
-                }
+                SerializationTools.InitTabulations(out outerTabulationBuilder, out innerTabulationBuilder, tabulationsCount);
             }
             StringBuilder builder = new StringBuilder();
-            builder.AppendLine("[");
-            builder.AppendLine($"{innerTabulationBuilder}(string:path)={file.Path},");
-            builder.AppendLine($"{innerTabulationBuilder}(string:name)={EncodingTools.EncodeString(file.Name, encoding)},");
+            SerializationTools.InitStartBaseSystemEntitySerializationStrings(ref builder, file, encoding, outerTabulationBuilder, innerTabulationBuilder);
             builder.AppendLine($"{innerTabulationBuilder}(string:extension)={file.Extension},");
             builder.AppendLine($"{innerTabulationBuilder}(file_attributes_null:attributes)={FileAttributesSerializer(file.Attributes)},");
             builder.AppendLine($"{innerTabulationBuilder}(date_time_null:last_modified_date_time)={(file.LastModifiedDateTime is null?"null":((DateTimeOffset)file.LastModifiedDateTime.Value).ToUnixTimeSeconds().ToString())},");
-            builder.AppendLine($"{innerTabulationBuilder}(list<block>[{file.Blocks.Count}]:blocks)="+"{"+(file.IsSingleBlock ? "empty;" : BlocksListSerializer(file.Blocks, formatting, tabulationCount + 1))+"},");
+            builder.AppendLine($"{innerTabulationBuilder}{_startOfBlockListDeclaration}{file.Blocks.Count}]:blocks)="+"{"+(file.IsSingleBlock ? "empty;" : (formatting == Formatting.Indented ? BlocksListSerializer(file.Blocks, formatting, tabulationsCount + 1) : BlocksListSerializer(file.Blocks)))+$"{_endOfBlockListDeclaration}");
             builder.AppendLine($"{innerTabulationBuilder}(boolean:is_single_block)={(file.IsSingleBlock ? "true" : "false")},");
-            builder.AppendLine($"{innerTabulationBuilder}(uint64:size)={file.Size},");
-            builder.AppendLine($"{innerTabulationBuilder}(string:parent_path)={file.Parent.Path},");
-            builder.AppendLine($"{innerTabulationBuilder}(string:hash)={file.Hash};");
-            builder.Append($"{outerTabulationBuilder}]");
+            SerializationTools.InitEndBaseSerializationStrings(ref builder, file, outerTabulationBuilder, innerTabulationBuilder);
             return builder.ToString();
         }
         #region Serialization Algorithms
         private static string FileAttributesSerializer(FileAttributes? attributes)
         {
             if (attributes is null)
+            {
                 return "null";
+            }
             switch (attributes.Value)
             {
                 case FileAttributes.Hidden:
@@ -312,25 +359,23 @@ namespace Ipfs.Hypermedia
                     return "normal";
             }
         }
-
-        private static string BlocksListSerializer(List<Block> blocks, Formatting formatting = Formatting.None, uint tabulationCount = 0)
+        private static string BlocksListSerializer(List<Block> blocks)
+        {
+            return BlocksListSerializer(blocks, Formatting.None, 0);
+        }
+        private static string BlocksListSerializer(List<Block> blocks, Formatting formatting, uint tabulationsCount)
         {
             string outerTabulationBuilder = string.Empty;
             string innerTabulationBuilder = string.Empty;
             if (formatting == Formatting.Indented)
             {
-                innerTabulationBuilder += '\t';
-                for (int i = 0; i < tabulationCount; ++i)
-                {
-                    innerTabulationBuilder += '\t';
-                    outerTabulationBuilder += '\t';
-                }
+                SerializationTools.InitTabulations(out outerTabulationBuilder, out innerTabulationBuilder, tabulationsCount);
             }
             StringBuilder builder = new StringBuilder();
             builder.AppendLine("[");
             for (int i = 0; i < blocks.Count; ++i)
             {
-                builder.AppendLine($"{innerTabulationBuilder}(block:{i})={Block.SerializeToString(blocks[i], formatting, tabulationCount + 1)}{(i == blocks.Count-1 ? ";" : ",")}");
+                builder.AppendLine($"{innerTabulationBuilder}(block:{i})={(formatting == Formatting.Indented ? Block.SerializeToString(blocks[i], formatting, tabulationsCount + 1) : Block.SerializeToString(blocks[i]))}{(i == blocks.Count-1 ? ";" : ",")}");
             }
             builder.Append($"{outerTabulationBuilder}]");
             return builder.ToString();
@@ -363,35 +408,24 @@ namespace Ipfs.Hypermedia
             string parent_path = null;
             string hash = null;
 
-            input = input.Replace("\t", "");
+            DeserializationTools.CheckStringFormat(input, false);
 
-            if (!input.StartsWith("["))
-                throw new ArgumentException("Bad formatting in serialized string detected. Expected [ in start.");
-            if (!input.EndsWith("]"))
-                throw new ArgumentException("Bad formatting in serialized string detected. Expected ] in end.");
+            string blockList;
+            int count;
+            List<string> stringList;
+            DeserializationTools.SplitStringForSystemEntity(input, _startOfBlockListDeclaration, _endOfBlockListDeclaration, 13, out count, out blockList, out stringList, true);
 
-            input = input.TrimStart('[').TrimEnd(']').TrimStart('\r').TrimEnd('\n').TrimStart('\n');
-
-            string blockList = ExtractSerializedBlocksList(input);
-            int count = BlocksListCount(input);
-            input = RemoveBlocksList(input);
-            var stringList = input.Split('\n').ToList();
-
-            path = new string(stringList[0].Skip(14).TakeWhile(x => x != ',').ToArray());
-            name = EncodingTools.DecodeString(new string(stringList[1].Skip(14).TakeWhile(x => x != ',').ToArray()), encoding);
+            DeserializationTools.ParseStartBaseSystemEntitySerializationString(stringList, encoding, out path, out name);
             extension = new string(stringList[2].Skip(19).TakeWhile(x => x != ',').ToArray());
             attributes = FileAttributesDeserializer(new string(stringList[3].Skip(34).TakeWhile(x => x != ',').ToArray()));
             lastModDateTime = long.Parse(new string(stringList[4].Skip(41).TakeWhile(x => x != ',').ToArray()));
             lastModifiedDateTime = DateTimeOffset.FromUnixTimeSeconds(lastModDateTime).UtcDateTime;
             isSingleBlock = (new string(stringList[5].Skip(26).TakeWhile(x => x != ',').ToArray()) == "true") ? true : false;
-            size = ulong.Parse(new string(stringList[6].Skip(14).TakeWhile(x => x != ',').ToArray()));
-            parent_path = new string(stringList[7].Skip(21).TakeWhile(x => x != ',').ToArray());
-            hash = new string(stringList[8].Skip(14).TakeWhile(x => x != ';').ToArray());
+            DeserializationTools.ParseEndBaseSerializationString(stringList, 6, out size, out parent_path, out hash);
 
-            if (parent.Path != parent_path)
-                throw new ArgumentException("Deserialized parent path is not the expected one");
+            DeserializationTools.CheckParent(parent, parent_path, false);
 
-            File file = new File()
+            File file = new File
             {
                 Path = path,
                 Name = name,
@@ -404,7 +438,9 @@ namespace Ipfs.Hypermedia
                 Hash = hash
             };
             if (count != 0)
+            {
                 blocks = BlocksListDeserializer(blockList, file, count);
+            }
 
             file.Blocks = blocks;
             return file;
@@ -413,7 +449,9 @@ namespace Ipfs.Hypermedia
         private static FileAttributes? FileAttributesDeserializer(string input)
         {
             if (input == "null")
+            {
                 return null;
+            }
             switch (input)
             {
                 case "directory":
@@ -440,15 +478,14 @@ namespace Ipfs.Hypermedia
         {
             List<Block> blocks = new List<Block>();
 
-            if (!input.StartsWith("["))
-                throw new ArgumentException("Bad formatting in serialized string detected. Expected [ in start.");
-            if (!input.EndsWith("]"))
-                throw new ArgumentException("Bad formatting in serialized string detected. Expected ] in end.");
+            DeserializationTools.CheckStringFormat(input, false);
 
             input = input.TrimStart('[').TrimEnd(']').TrimStart('\r').TrimEnd('\n').TrimStart('\n').TrimEnd('\r');
-            var stringList = input.Split(new string[2] { "],", "];" }, StringSplitOptions.RemoveEmptyEntries).ToList();
+            var stringList = input.Split(new string[] { "],", "];" }, StringSplitOptions.RemoveEmptyEntries).ToList();
             if (stringList.Count != count)
-                throw new Exception("Parsed string list does not match expected collection length");
+            {
+                throw new ArgumentException("Parsed string list does not match expected collection length", "count");
+            }
             for(int i = 0; i < stringList.Count; ++i)
             {
                 stringList[i] = stringList[i].TrimStart('\r').TrimStart('\n');
@@ -460,59 +497,18 @@ namespace Ipfs.Hypermedia
             {
                 int index = int.Parse(new string(stringList[i].Skip(7).TakeWhile(s => s != ')').ToArray()));
                 if (index != i)
-                    throw new Exception("Possible serialization error encountered. Unexpected sequence");
+                {
+                    throw new ArgumentException("Possible serialization error encountered. Unexpected sequence", "input");
+                }
                 blocks.Add(Block.DeserializeFromString(new string(stringList[i].SkipWhile(s => s != '[').ToArray()), parent));
             }
 
             if (count != blocks.Count)
-                throw new Exception("Serialized and deserialized collection length does not match");
+            {
+                throw new ArgumentException("Serialized and deserialized collection length does not match", "count");
+            }
 
             return blocks;
-        }
-
-        private static string RemoveBlocksList(string input)
-        {
-            string redacted = null;
-
-            int start_block_index = input.IndexOf("(list<block>[");
-            int end_block_index = input.IndexOf("},");
-            redacted = input.Remove(start_block_index - 1,
-                    (end_block_index + 3) - start_block_index - 1);
-            return redacted;
-        }
-
-        private static string ExtractSerializedBlocksList(string input)
-        {
-            string extracted = null;
-
-            int start_block_index = input.IndexOf("(list<block>[");
-            int end_block_index = input.IndexOf("},");
-
-            int count = int.Parse(new string(input.Skip(start_block_index + 13).TakeWhile(s => s != ']').ToArray()));
-            if (count != 0)
-            {
-                extracted = new string
-                (
-                    input.Skip
-                    (
-                        start_block_index + input.Skip(start_block_index)
-                        .TakeWhile(s => s != '{').ToArray().Length + 1
-                    ).Take(
-                        (end_block_index - 2) - (start_block_index + input.Skip(start_block_index)
-                        .TakeWhile(s => s != '{').Skip(1).ToArray().Length)
-                    ).ToArray()
-                );
-            }
-            return extracted;
-        }
-
-        private static int BlocksListCount(string input)
-        {
-            int start_block_index = input.IndexOf("(list<block>[");
-            int end_block_index = input.IndexOf("},");
-
-            int count = int.Parse(new string(input.Skip(start_block_index + 13).TakeWhile(s => s != ']').ToArray()));
-            return count;
         }
         #endregion Deserialization Algorithms
         #region Validation
@@ -521,132 +517,180 @@ namespace Ipfs.Hypermedia
             long lastModDateTime = 0;
             ulong size = 0;
 
-            if (!input.StartsWith("["))
+            if (!DeserializationTools.CheckStringFormat(input, true))
+            {
                 return false;
-            if (!input.EndsWith("]"))
+            }
+
+            int count;
+            string blockList;
+            List<string> stringList;
+            
+            if(!DeserializationTools.SplitStringForSystemEntity(input, _startOfBlockListDeclaration, _endOfBlockListDeclaration, 13, out count, out blockList, out stringList, true))
+            {
                 return false;
+            }
 
-            string tmp = input.TrimStart('[').TrimEnd(']').TrimStart('\r').TrimEnd('\n').TrimStart('\n');
-
-            int count = -1;
-            if (!TryParseBlocksListCount(tmp, out count))
-                return false;
-            string blockList = ExtractSerializedBlocksList(tmp);
-            tmp = RemoveBlocksList(tmp);
-
-            var stringList = tmp.Split('\n').ToList();
             if (stringList.Count != 9)
-                return false;
-
-            foreach (var s in stringList)
             {
-                if (!s.StartsWith("("))
-                    return false;
+                return false;
             }
 
-            for (int i = 0; i < 8; ++i)
+            if (!DeserializationTools.ValidateStartOfStrings(stringList))
             {
-                if (!stringList[i].EndsWith(",\r"))
-                    return false;
-            }
-            if (!stringList[8].EndsWith(";\r"))
                 return false;
+            }
+
+            if (!DeserializationTools.ValidateEndOfStrings(stringList, 8))
+            {
+                return false;
+            }
 
             //0
             if ((new string(stringList[0].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[0].Skip(8).TakeWhile(x => x != ')').ToArray())) != "path")
+            {
                 return false;
+            }
             //1
             if ((new string(stringList[1].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[1].Skip(8).TakeWhile(x => x != ')').ToArray())) != "name")
+            {
                 return false;
+            }
             //2
             if ((new string(stringList[2].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[2].Skip(8).TakeWhile(x => x != ')').ToArray())) != "extension")
+            {
                 return false;
+            }
             //3
             if ((new string(stringList[3].Skip(1).TakeWhile(x => x != ':').ToArray())) != "file_attributes_null")
+            {
                 return false;
+            }
 
             if ((new string(stringList[3].Skip(22).TakeWhile(x => x != ')').ToArray())) != "attributes")
+            {
                 return false;
+            }
             //4
             if ((new string(stringList[4].Skip(1).TakeWhile(x => x != ':').ToArray())) != "date_time_null")
+            {
                 return false;
+            }
 
             if ((new string(stringList[4].Skip(16).TakeWhile(x => x != ')').ToArray())) != "last_modified_date_time")
+            {
                 return false;
+            }
             //5
             if ((new string(stringList[5].Skip(1).TakeWhile(x => x != ':').ToArray())) != "boolean")
+            {
                 return false;
+            }
 
             if ((new string(stringList[5].Skip(9).TakeWhile(x => x != ')').ToArray())) != "is_single_block")
+            {
                 return false;
+            }
             //6
             if ((new string(stringList[6].Skip(1).TakeWhile(x => x != ':').ToArray())) != "uint64")
+            {
                 return false;
+            }
 
             if ((new string(stringList[6].Skip(8).TakeWhile(x => x != ')').ToArray())) != "size")
+            {
                 return false;
+            }
             //7
             if ((new string(stringList[7].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[7].Skip(8).TakeWhile(x => x != ')').ToArray())) != "parent_path")
+            {
                 return false;
+            }
             //8
             if ((new string(stringList[8].Skip(1).TakeWhile(x => x != ':').ToArray())) != "string")
+            {
                 return false;
+            }
 
             if ((new string(stringList[8].Skip(8).TakeWhile(x => x != ')').ToArray())) != "hash")
+            {
                 return false;
+            }
             //TryParse
             if (!long.TryParse(new string(stringList[4].Skip(41).TakeWhile(x => x != ',').ToArray()), out lastModDateTime))
+            {
                 return false;
+            }
 
             if (!(new string(stringList[5].Skip(26).TakeWhile(x => x != ',').ToArray()) == "true" || new string(stringList[5].Skip(26).TakeWhile(x => x != ',').ToArray()) == "false"))
+            {
                 return false;
+            }
 
             if (!ulong.TryParse(new string(stringList[6].Skip(14).TakeWhile(x => x != ',').ToArray()), out size))
+            {
                 return false;
+            }
 
             string path = new string(stringList[0].Skip(14).TakeWhile(x => x != ',').ToArray());
 
             string parent_path = new string(stringList[7].Skip(21).TakeWhile(x => x != ',').ToArray());
-            if (parent.Path != parent_path)
+            if (!DeserializationTools.CheckParent(parent, parent_path, true))
+            {
                 return false;
+            }
 
-            File file = new File()
+            File file = new File
             {
                 Path = path
             };
             bool isBlocksValid = true;
             if (count > 0)
+            {
                 isBlocksValid = TryBlocksListDeserializer(blockList, file, count);
+            }
 
             if (!isBlocksValid)
+            {
                 return false;
+            }
 
             return true;
         }
 
         private static bool TryBlocksListDeserializer(string input, File parent, int count)
         {
-            if (!input.StartsWith("["))
+            if (!DeserializationTools.CheckStringFormat(input, true))
+            {
                 return false;
-            if (!input.EndsWith("]"))
-                return false;
+            }
 
             input = input.TrimStart('[').TrimEnd(']').TrimStart('\r').TrimEnd('\n').TrimStart('\n').TrimEnd('\r');
-            var stringList = input.Split(new string[2] { "],", "];" }, StringSplitOptions.RemoveEmptyEntries).ToList();
+            var stringList = input.Split(new string[] { "],", "];" }, StringSplitOptions.RemoveEmptyEntries).ToList();
             if (stringList.Count != count)
+            {
                 return false;
+            }
             for (int i = 0; i < stringList.Count; ++i)
             {
                 stringList[i] = stringList[i].TrimStart('\r').TrimStart('\n');
@@ -659,27 +703,16 @@ namespace Ipfs.Hypermedia
             {
                 int index = int.Parse(new string(stringList[i].Skip(7).TakeWhile(s => s != ')').ToArray()));
                 if (index != i)
+                {
                     return false;
+                }
                 if (!Block.IsSerializedStringValid(new string(stringList[i].SkipWhile(s => s != '[').ToArray()), parent))
+                {
                     result = false;
+                }
             }
 
             return result;
-        }
-
-        private static bool TryParseBlocksListCount(string input, out int count)
-        {
-            count = -1;
-            if (!input.Contains("(list<block>["))
-                return false;
-            int start_block_index = input.IndexOf("(list<block>[");
-            if (!input.Contains("},"))
-                return false;
-            int end_block_index = input.IndexOf("},");
-
-            if (!int.TryParse(new string(input.Skip(start_block_index + 13).TakeWhile(s => s != ']').ToArray()), out count))
-                return false;
-            return true;
         }
         #endregion Validation
     }

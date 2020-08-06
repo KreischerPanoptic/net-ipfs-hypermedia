@@ -77,8 +77,6 @@ namespace Ipfs.Hypermedia.Cryptography
 
         protected Keccak(int hashBitLength)
         {
-            if (hashBitLength != 224 && hashBitLength != 256 && hashBitLength != 384 && hashBitLength != 512)
-                throw new ArgumentException("hashBitLength must be 224, 256, 384, or 512", "hashBitLength");
             Initialize();
             HashSizeValue = hashBitLength;
             switch (hashBitLength)
@@ -95,8 +93,10 @@ namespace Ipfs.Hypermedia.Cryptography
                 case 512:
                     KeccakR = 576;
                     break;
+                default:
+                    throw new ArgumentException("hashBitLength must be 224, 256, 384, or 512", "hashBitLength");
             }
-            RoundConstants = new ulong[]
+            RoundConstants = new []
             {
                 0x0000000000000001UL,
                 0x0000000000008082UL,
@@ -125,7 +125,7 @@ namespace Ipfs.Hypermedia.Cryptography
             };
         }
 
-        protected ulong ROL(ulong a, int offset)
+        protected static ulong ROL(ulong a, int offset)
         {
             return (((a) << ((offset) % KeccakLaneSizeInBits)) ^ ((a) >> (KeccakLaneSizeInBits - ((offset) % KeccakLaneSizeInBits))));
         }
@@ -183,13 +183,21 @@ namespace Ipfs.Hypermedia.Cryptography
         void HashCore(byte[] array, int ibStart, int cbSize)
         {
             if (array == null)
+            {
                 throw new ArgumentNullException("array");
+            }
             if (ibStart < 0)
+            {
                 throw new ArgumentOutOfRangeException("ibStart");
+            }
             if (cbSize > array.Length)
+            {
                 throw new ArgumentOutOfRangeException("cbSize");
+            }
             if (ibStart + cbSize > array.Length)
+            {
                 throw new ArgumentOutOfRangeException("ibStart or cbSize");
+            }
         }
 
 #if PORTABLE

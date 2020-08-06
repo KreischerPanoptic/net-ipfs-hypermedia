@@ -1,5 +1,6 @@
 # net-ipfs-hypermedia
 
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/359a8c21621740cdb5ca2831184dd364)](https://www.codacy.com/manual/biostasis/net-ipfs-hypermedia?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=KreischerPanoptic/net-ipfs-hypermedia&amp;utm_campaign=Badge_Grade)
 [![Version](https://img.shields.io/nuget/v/Ipfs.Hypermedia.svg)](https://www.nuget.org/packages/Ipfs.Hypermedia)
 
 A self-describing metadata format for [IPFS](https://github.com/ipfs/ipfs) (Inter Planetary File System) entities for .Net (C#, VB, F# etc.)

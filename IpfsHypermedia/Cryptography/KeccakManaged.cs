@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Ipfs.Hypermedia.Cryptography
 {
-    internal partial class KeccakManaged : Keccak
+    internal class KeccakManaged : Keccak
     {
         public KeccakManaged(int hashBitLength)
             : base(hashBitLength)
@@ -21,14 +21,18 @@ namespace Ipfs.Hypermedia.Cryptography
         {
             base.HashCore(array, ibStart, cbSize);
             if (cbSize == 0)
+            {
                 return;
+            }
             int sizeInBytes = SizeInBytes;
             if (buffer == null)
                 buffer = new byte[sizeInBytes];
             int stride = sizeInBytes >> 3;
             ulong[] utemps = new ulong[stride];
             if (buffLength == sizeInBytes)
-                throw new Exception("Unexpected error, the internal buffer is full");
+            {
+                throw new OverflowException("Unexpected error, the internal buffer is full");
+            }
             AddToBuffer(array, ref ibStart, ref cbSize);
             if (buffLength == sizeInBytes)//buffer full
             {
@@ -58,9 +62,13 @@ namespace Ipfs.Hypermedia.Cryptography
             byte[] outb = new byte[HashByteLength];
             //    padding
             if (buffer == null)
+            {
                 buffer = new byte[sizeInBytes];
+            }
             else
+            {
                 Array.Clear(buffer, buffLength, sizeInBytes - buffLength);
+            }
             buffer[buffLength++] = 1;
             buffer[sizeInBytes - 1] |= 0x80;
             int stride = sizeInBytes >> 3;
@@ -74,7 +82,9 @@ namespace Ipfs.Hypermedia.Cryptography
         private void KeccakF(ulong[] inb, int laneCount)
         {
             while (--laneCount >= 0)
+            {
                 state[laneCount] ^= inb[laneCount];
+            }
             ulong Aba, Abe, Abi, Abo, Abu;
             ulong Aga, Age, Agi, Ago, Agu;
             ulong Aka, Ake, Aki, Ako, Aku;
@@ -87,7 +97,6 @@ namespace Ipfs.Hypermedia.Cryptography
             ulong Eka, Eke, Eki, Eko, Eku;
             ulong Ema, Eme, Emi, Emo, Emu;
             ulong Esa, Ese, Esi, Eso, Esu;
-            int round = laneCount;
 
             //copyFromState(A, state)
             Aba = state[0];
@@ -116,7 +125,7 @@ namespace Ipfs.Hypermedia.Cryptography
             Aso = state[23];
             Asu = state[24];
 
-            for (round = 0; round < KeccakNumberOfRounds; round += 2)
+            for (int round = 0; round < KeccakNumberOfRounds; round += 2)
             {
                 //    prepareTheta
                 BCa = Aba ^ Aga ^ Aka ^ Ama ^ Asa;
