@@ -686,10 +686,6 @@ namespace Ipfs.Hypermedia
                             if (!isStringValid)
                             {
                                 toReturn += new string(tmpInput.Skip(new string(tmpInput.TakeWhile(s => s != '[').ToArray()).Length + toReturn.Length).Take(1).ToArray());
-                                if(toReturn.Length > 1150)
-                                {
-                                    var i = toReturn.Length;
-                                }
                             }
                         }
                         while (!isStringValid);
