@@ -176,13 +176,6 @@ namespace Ipfs.Hypermedia
             if (Hash is null)
             {
                 KeccakManaged keccak = new KeccakManaged(512);
-
-                IEntity parent = Parent;
-                while (!(parent is Hypermedia))
-                {
-                    parent = parent.Parent;
-                }
-
                 List<string> entitesHashes = new List<string>();
                 foreach (var e in Entities)
                 {
@@ -196,7 +189,6 @@ namespace Ipfs.Hypermedia
                     }
                 }
                 List<byte> buffer = new List<byte>();
-                buffer.AddRange((parent as Hypermedia).Encoding.GetBytes(Name));
                 foreach (var eh in entitesHashes)
                 {
                     buffer.AddRange(Encoding.UTF8.GetBytes(eh));
@@ -283,6 +275,10 @@ namespace Ipfs.Hypermedia
             SerializationTools.InitStartBaseSystemEntitySerializationStrings(ref builder, directory, encoding, outerTabulationBuilder, innerTabulationBuilder);
             builder.AppendLine($"{innerTabulationBuilder}(file_attributes_null:attributes)={FileAttributesSerializer(directory.Attributes)},");
             builder.AppendLine($"{innerTabulationBuilder}(date_time_null:last_modified_date_time)={(directory.LastModifiedDateTime is null ? "null" : ((DateTimeOffset)directory.LastModifiedDateTime.Value).ToUnixTimeSeconds().ToString())},");
+            if (directory.Entities.Count <= 0)
+            {
+                throw new ArgumentException("Directory entities list can not be empty", nameof(directory));
+            }
             builder.AppendLine($"{innerTabulationBuilder}{_startOfSystemEntityListDeclaration}{directory.Entities.Count}]:entities)=" + "{" + (directory.Entities.Count <= 0 ? "empty;" : (formatting == Formatting.Indented ? SystemEntitiesListSerializer(directory.Entities, encoding, formatting, tabulationsCount + 1) : SystemEntitiesListSerializer(directory.Entities, encoding))) + $"{_endOfSystemEntityListDeclaration}");
             SerializationTools.InitEndBaseSerializationStrings(ref builder, directory, outerTabulationBuilder, innerTabulationBuilder);
             return builder.ToString();

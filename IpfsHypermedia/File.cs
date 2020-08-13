@@ -230,20 +230,12 @@ namespace Ipfs.Hypermedia
                 }
                 else
                 {
-                    IEntity parent = Parent;
-                    while(!(parent is Hypermedia))
-                    {
-                        parent = parent.Parent;
-                    }
-
                     List<string> blockHashes = new List<string>();
                     foreach (var b in Blocks)
                     {
                         blockHashes.Add(b.Hash);
                     }
                     List<byte> buffer = new List<byte>();
-                    buffer.AddRange((parent as Hypermedia).Encoding.GetBytes(Name));
-                    buffer.AddRange((parent as Hypermedia).Encoding.GetBytes(Extension));
                     foreach (var bh in blockHashes)
                     {
                         buffer.AddRange(Encoding.UTF8.GetBytes(bh));
