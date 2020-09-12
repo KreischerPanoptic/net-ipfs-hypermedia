@@ -12,7 +12,7 @@ namespace Ipfs.Hypermedia.Tools
     {
         public static List<ISerializationVersion> GetVersions()
         {
-            return new List<ISerializationVersion>() { new HypermediaVersion10() };
+            return new List<ISerializationVersion>() { new HypermediaSerialization10() };
         }
         public static string GetVersion(string input)
         {
@@ -31,7 +31,7 @@ namespace Ipfs.Hypermedia.Tools
             switch (version)
             {
                 case "hypermedia/0.1.0":
-                    return new HypermediaVersion10();
+                    return new HypermediaSerialization10();
                 default:
                     throw new ArgumentException("Version unknown", nameof(version));
             }
