@@ -115,7 +115,7 @@ namespace Ipfs.Hypermedia
             }
             StringBuilder builder = new StringBuilder();
             builder.AppendLine("[");
-            builder.AppendLine($"{innerTabulationBuilder}(string:key)={block.Key},");
+            builder.AppendLine($"{innerTabulationBuilder}(string:path)={block.Path},");
             SerializationTools.InitEndBaseSerializationStrings(ref builder, block, outerTabulationBuilder, innerTabulationBuilder);
             return builder.ToString();
         }
@@ -130,7 +130,7 @@ namespace Ipfs.Hypermedia
         /// </param>
         public static Block DeserializeFromString(string input, File parent)
         {
-            string key = null;
+            string path = null;
             ulong size = 0;
             string parent_path = null;
             string hash = null;
@@ -139,12 +139,12 @@ namespace Ipfs.Hypermedia
 
             var stringList = DeserializationTools.SplitStringForBlock(input);
 
-            key = new string(stringList[0].Skip(13).TakeWhile(x => x != ',').ToArray());
+            path = new string(stringList[0].Skip(14).TakeWhile(x => x != ',').ToArray());
             DeserializationTools.ParseEndBaseSerializationString(stringList, 1, out size, out parent_path, out hash);
 
             DeserializationTools.CheckParent(parent, parent_path, false);
 
-            return new Block { Key = key, Size = size, Parent = parent, Hash = hash };
+            return new Block { Path = path, Size = size, Parent = parent, Hash = hash };
         }
         #region Validation
         public static bool IsSerializedStringValid(string input, File parent)
@@ -175,7 +175,7 @@ namespace Ipfs.Hypermedia
                 return false;
             }
 
-            if ((new string(stringList[0].Skip(8).TakeWhile(x => x != ')').ToArray())) != "key")
+            if ((new string(stringList[0].Skip(8).TakeWhile(x => x != ')').ToArray())) != "path")
             {
                 return false;
             }
