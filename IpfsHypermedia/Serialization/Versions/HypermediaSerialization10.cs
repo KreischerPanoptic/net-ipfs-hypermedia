@@ -4,10 +4,11 @@ using System.Linq;
 using System.Text;
 
 using Ipfs.Hypermedia.Tools;
+using Ipfs.Hypermedia.Versions;
 
 namespace Ipfs.Hypermedia.Serialization.Versions
 {
-    internal class HypermediaVersion10 : ISerializationVersion
+    internal class HypermediaSerialization10 : ISerializationVersion
     {
         private const string _startOfEntityListDeclaration = "(list<entity_interface>[";
         private const string _endOfEntityListDeclaration = "},";
@@ -172,7 +173,7 @@ namespace Ipfs.Hypermedia.Serialization.Versions
                 DeserializationTools.CheckParent(parent, parent_path, false);
             }
 
-            Hypermedia hypermedia = new Hypermedia
+            Hypermedia10 hypermedia = new Hypermedia10
             {
                 Path = path,
                 Name = name,
@@ -582,7 +583,7 @@ namespace Ipfs.Hypermedia.Serialization.Versions
                 }
             }
 
-            Hypermedia hypermedia = new Hypermedia
+            Hypermedia10 hypermedia = new Hypermedia10
             {
                 Path = path,
                 Encoding = encoding,
