@@ -18,9 +18,9 @@ namespace Ipfs.Hypermedia
     public sealed class Block
     {
         /// <summary>
-        ///   Key of block in IPFS distributed file system.
+        ///   Path for this block in IPFS distributed file system.
         /// </summary>
-        public string Key { get; set; }
+        public string Path { get; set; }
         /// <summary>
         ///   Size of block in bytes.
         /// </summary>
