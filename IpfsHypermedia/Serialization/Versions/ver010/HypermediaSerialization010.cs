@@ -5,10 +5,11 @@ using System.Text;
 
 using Ipfs.Hypermedia.Tools;
 using Ipfs.Hypermedia.Versions;
+using Ipfs.Hypermedia.Versions.ver010;
 
-namespace Ipfs.Hypermedia.Serialization.Versions
+namespace Ipfs.Hypermedia.Serialization.Versions.ver010
 {
-    internal class HypermediaSerialization10 : ISerializationVersion
+    internal class HypermediaSerialization010 : ISerializationVersion
     {
         private const string _startOfEntityListDeclaration = "(list<entity_interface>[";
         private const string _endOfEntityListDeclaration = "},";
@@ -102,7 +103,7 @@ namespace Ipfs.Hypermedia.Serialization.Versions
                 }
                 else if (entities[i] is Hypermedia)
                 {
-                    var serializator = VersionTools.GetSerializationVersion((entities[i] as Hypermedia).Version);
+                    var serializator = SerializationVersionTools.GetSerializationVersion((entities[i] as Hypermedia).Version);
                     builder.AppendLine($"{innerTabulationBuilder}(hypermedia:{i})={(formatting == Formatting.Indented ? serializator.SerializeToString(entities[i] as Hypermedia, formatting, tabulationsCount + 1) : serializator.SerializeToString(entities[i] as Hypermedia))}{(i == entities.Count - 1 ? ";" : ",")}");
                 }
             }
@@ -173,7 +174,7 @@ namespace Ipfs.Hypermedia.Serialization.Versions
                 DeserializationTools.CheckParent(parent, parent_path, false);
             }
 
-            Hypermedia10 hypermedia = new Hypermedia10
+            Hypermedia010 hypermedia = new Hypermedia010
             {
                 Path = path,
                 Name = name,
@@ -229,7 +230,7 @@ namespace Ipfs.Hypermedia.Serialization.Versions
                         entities.Add(Directory.DeserializeFromString(new string(stringList[i].SkipWhile(s => s != '[').ToArray()), parent, parent.Encoding));
                         break;
                     case "hypermedia":
-                        var deserializer = VersionTools.GetSerializationVersion(VersionTools.GetVersion(new string(stringList[i].SkipWhile(s => s != '[').ToArray())));
+                        var deserializer = SerializationVersionTools.GetSerializationVersion(SerializationVersionTools.GetVersion(new string(stringList[i].SkipWhile(s => s != '[').ToArray())));
                         entities.Add(deserializer.DeserializeFromString(new string(stringList[i].SkipWhile(s => s != '[').ToArray()), parent));
                         break;
                     default:
@@ -298,7 +299,7 @@ namespace Ipfs.Hypermedia.Serialization.Versions
                         toReturn = new string(tmpInput.SkipWhile(s => s != '[').Take(1).ToArray());
                         do
                         {
-                            var versions = VersionTools.GetVersions();
+                            var versions = SerializationVersionTools.GetVersions();
                             foreach(var v in versions)
                             {
                                 isStringValid = v.IsSerializedStringValid(toReturn, parent);
@@ -583,7 +584,7 @@ namespace Ipfs.Hypermedia.Serialization.Versions
                 }
             }
 
-            Hypermedia10 hypermedia = new Hypermedia10
+            Hypermedia010 hypermedia = new Hypermedia010
             {
                 Path = path,
                 Encoding = encoding,
@@ -648,7 +649,7 @@ namespace Ipfs.Hypermedia.Serialization.Versions
                         }
                         break;
                     case "hypermedia":
-                        var deserializer = VersionTools.GetSerializationVersion(VersionTools.GetVersion(new string(stringList[i].SkipWhile(s => s != '[').ToArray())));
+                        var deserializer = SerializationVersionTools.GetSerializationVersion(SerializationVersionTools.GetVersion(new string(stringList[i].SkipWhile(s => s != '[').ToArray())));
                         if (!deserializer.IsSerializedStringValid(new string(stringList[i].SkipWhile(s => s != '[').ToArray()), parent))
                         {
                             result = false;
@@ -713,7 +714,7 @@ namespace Ipfs.Hypermedia.Serialization.Versions
                         toReturn = new string(tmpInput.SkipWhile(s => s != '[').Take(1).ToArray());
                         do
                         {
-                            var versions = VersionTools.GetVersions();
+                            var versions = SerializationVersionTools.GetVersions();
                             foreach (var v in versions)
                             {
                                 isStringValid = v.IsSerializedStringValid(toReturn, parent);

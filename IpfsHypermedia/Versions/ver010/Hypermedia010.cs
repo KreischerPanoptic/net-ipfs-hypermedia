@@ -3,9 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Ipfs.Hypermedia.Versions
+namespace Ipfs.Hypermedia.Versions.ver010
 {
-    public sealed class Hypermedia10 : Hypermedia
+    public sealed class Hypermedia010 : Hypermedia
     {
         /// <summary>
         ///   Information about version of hypermedia metadata.
