@@ -264,7 +264,7 @@ namespace Ipfs.Hypermedia
         {
             await Task.Run(async () =>
             {
-                var serializator = VersionTools.GetSerializationVersion(instance.Version);
+                var serializator = SerializationVersionTools.GetSerializationVersion(instance.Version);
                 var buffer = Encoding.UTF8.GetBytes(serializator.SerializeToString(instance, formatting, 0));
                 await outputStream.WriteAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
             }).ConfigureAwait(false);
@@ -329,7 +329,7 @@ namespace Ipfs.Hypermedia
                     }
                 }
                 string input = System.Text.Encoding.UTF8.GetString(buffer.ToArray());
-                var deserializer = VersionTools.GetSerializationVersion(VersionTools.GetVersion(input));
+                var deserializer = SerializationVersionTools.GetSerializationVersion(SerializationVersionTools.GetVersion(input));
                 return deserializer.DeserializeFromString(input);
             }).ConfigureAwait(false);
         }
