@@ -4,15 +4,15 @@ using System.Linq;
 using System.Text;
 
 using Ipfs.Hypermedia.Serialization;
-using Ipfs.Hypermedia.Serialization.Versions;
+using Ipfs.Hypermedia.Serialization.Versions.ver010;
 
 namespace Ipfs.Hypermedia.Tools
 {
-    internal static class VersionTools
+    internal static class SerializationVersionTools
     {
         public static List<ISerializationVersion> GetVersions()
         {
-            return new List<ISerializationVersion>() { new HypermediaVersion10() };
+            return new List<ISerializationVersion>() { new HypermediaSerialization010() };
         }
         public static string GetVersion(string input)
         {
@@ -31,7 +31,7 @@ namespace Ipfs.Hypermedia.Tools
             switch (version)
             {
                 case "hypermedia/0.1.0":
-                    return new HypermediaVersion10();
+                    return new HypermediaSerialization010();
                 default:
                     throw new ArgumentException("Version unknown", nameof(version));
             }

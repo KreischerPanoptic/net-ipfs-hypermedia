@@ -22,7 +22,7 @@ namespace Ipfs.Hypermedia
     ///   It implements <see cref="IEntity">IEntity</see>, so it could store others Hypermedia inside it.
     ///   It DOESN'T implements <see cref="ISystemEntity">ISystemEntity</see>, because it's not managed by OS.
     /// </remarks>
-    public sealed class Hypermedia : IEntity
+    public abstract class Hypermedia : IEntity
     {
         /// <summary>
         ///   Path for this hypermedia in IPFS distributed file system.
@@ -199,14 +199,11 @@ namespace Ipfs.Hypermedia
         ///   It used in clients for choosing correct algorithms of parsing a hypermedia.
         ///   Current default - hypermedia/0.1.0
         /// </remarks>
-        public string Version { get; internal set; } = "hypermedia/0.1.0";
+        public abstract string Version { get; internal set; }
         /// <summary>
         ///   Creates and set hash for hypermedia instance.
         /// </summary>
-        public void SetHash()
-        {
-            SetHash(null);
-        }
+        public abstract void SetHash();
         /// <summary>
         ///   Creates and set hash for hypermedia instance.
         /// </summary>
@@ -217,44 +214,11 @@ namespace Ipfs.Hypermedia
         ///   You should never manually set content parameter of SetHash for Hypermedia.
         /// </remarks>
         /// <exception cref="Exception"/>
-        public void SetHash(byte[] content)
-        {
-            if (Hash is null)
-            {
-                KeccakManaged keccak = new KeccakManaged(512);
-
-                List<string> entitesHashes = new List<string>();
-                foreach (var e in Entities)
-                {
-                    entitesHashes.Add(e.GetHash());
-                }
-                List<byte> buffer = new List<byte>();
-                foreach (var eh in entitesHashes)
-                {
-                    buffer.AddRange(Encoding.UTF8.GetBytes(eh));
-                }
-
-                var buf = keccak.ComputeHash(buffer.ToArray());
-
-                StringBuilder sb = new StringBuilder();
-                foreach (var b in buf)
-                {
-                    sb.Append(b.ToString("X2"));
-                }
-                Hash = sb.ToString();
-            }
-            else
-            {
-                throw new AccessViolationException("Hash can only be set once");
-            }
-        }
+        public abstract void SetHash(byte[] content);
         /// <summary>
         ///   Creates and set hash for hypermedia instance, and returns it as string.
         /// </summary>
-        public string GetHash()
-        {
-            return GetHash(null);
-        }
+        public abstract string GetHash();
         /// <summary>
         ///   Creates and set hash for hypermedia instance, and returns it as string.
         /// </summary>
@@ -264,29 +228,11 @@ namespace Ipfs.Hypermedia
         /// <remarks>
         ///   You should never manually set content parameter of GetHash for Hypermedia.
         /// </remarks>
-        public string GetHash(byte[] content)
-        {
-            if (Hash is null)
-            {
-                SetHash();
-            }
-            return Hash;
-        }
+        public abstract string GetHash(byte[] content);
         /// <summary>
         ///   Creates and set topic for PubSub, using <see cref="Name">Name</see> and <see cref="Hash">Hash</see> as identifier.
         /// </summary>
-        public void SetTopic()
-        {
-            if (Hash is null)
-            {
-                throw new FieldAccessException("Hash must be created for hypermedia before topic address creation");
-            }
-            if (!(Topic is null))
-            {
-                throw new AccessViolationException("Topic can only be set once");
-            }
-            Topic = $"{Path}_{Hash}";
-        }
+        public abstract void SetTopic();
         /// <summary>
         ///   Serializes given hypermedia to stream asynchronously.
         /// </summary>
@@ -318,7 +264,7 @@ namespace Ipfs.Hypermedia
         {
             await Task.Run(async () =>
             {
-                var serializator = VersionTools.GetSerializationVersion(instance.Version);
+                var serializator = SerializationVersionTools.GetSerializationVersion(instance.Version);
                 var buffer = Encoding.UTF8.GetBytes(serializator.SerializeToString(instance, formatting, 0));
                 await outputStream.WriteAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
             }).ConfigureAwait(false);
@@ -383,7 +329,7 @@ namespace Ipfs.Hypermedia
                     }
                 }
                 string input = System.Text.Encoding.UTF8.GetString(buffer.ToArray());
-                var deserializer = VersionTools.GetSerializationVersion(VersionTools.GetVersion(input));
+                var deserializer = SerializationVersionTools.GetSerializationVersion(SerializationVersionTools.GetVersion(input));
                 return deserializer.DeserializeFromString(input);
             }).ConfigureAwait(false);
         }
